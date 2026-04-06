@@ -146,6 +146,8 @@ export const AdminGalleries = () => {
   const [paymentMethod, setPaymentMethod] = useState('manual');
   const [savingPayment, setSavingPayment] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<any | null>(null);
+  const [galleryType, setGalleryType] = useState<'courtesy' | 'unpaid' | 'partial'>('unpaid');
+
   
   // Data State
   const [galleries, setGalleries] = useState<any[]>([]);
@@ -249,7 +251,10 @@ export const AdminGalleries = () => {
         const { error } = await supabase
           .schema('app_carsena')
           .from('photographers')
-          .insert([adminToSave]);
+          .insert([{
+            ...adminToSave,
+            id: adminToSave.id || crypto.randomUUID()
+          }]);
 
         if (error) throw error;
         toast.success("Administrador cadastrado com sucesso!");
@@ -260,6 +265,30 @@ export const AdminGalleries = () => {
       fetchData();
     } catch (error: any) {
       toast.error("Erro ao salvar admin: " + error.message);
+    }
+  };
+
+  const handleSaveClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (newClient.id) {
+        const { error } = await supabase.schema('app_carsena').from('customers').update({
+          name: newClient.name,
+          email: newClient.email,
+          phone: newClient.phone
+        }).eq('id', newClient.id);
+        if (error) throw error;
+        toast.success("Cliente atualizado");
+      } else {
+        const { error } = await supabase.schema('app_carsena').from('customers').insert([newClient]);
+        if (error) throw error;
+        toast.success("Cliente cadastrado");
+      }
+      setIsCustomerModalOpen(false);
+      setNewClient({ name: '', email: '', phone: '' });
+      fetchData();
+    } catch (err: any) {
+      toast.error("Erro ao salvar cliente: " + err.message);
     }
   };
 
@@ -324,7 +353,7 @@ export const AdminGalleries = () => {
           .single();
 
         if (createdGallery) {
-          fetch(`${import.meta.env.VITE_API_URL}/emails/publish-gallery`, {
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/emails/publish-gallery`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ galleryId: createdGallery.id })
@@ -2197,7 +2226,8 @@ export const AdminFinance = () => {
   );
 };
 
-import { getPhotographers, createPhotographer, deletePhotographer } from "@/lib/api";
+// Import removed from here - already handled via supabase if possible or moved to shared
+
 
 const AdminTeam = () => {
   const [photographers, setPhotographers] = useState<any[]>([]);
@@ -2212,8 +2242,14 @@ const AdminTeam = () => {
   const fetchAdmins = async () => {
     setLoading(true);
     try {
-      const data = await getPhotographers();
-      setPhotographers(data);
+      const { data, error } = await supabase
+        .schema('app_carsena')
+        .from('photographers')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setPhotographers(data || []);
     } catch (error: any) {
       toast.error("Erro ao carregar administradores: " + error.message);
     } finally {
@@ -2224,7 +2260,16 @@ const AdminTeam = () => {
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createPhotographer(newAdmin);
+      const { error } = await supabase
+        .schema('app_carsena')
+        .from('photographers')
+        .insert([{
+          ...newAdmin,
+          id: crypto.randomUUID()
+        }]);
+      
+      if (error) throw error;
+      
       toast.success("Administrador criado com sucesso!");
       setIsModalOpen(false);
       setNewAdmin({ name: '', email: '', password: '' });
@@ -2237,7 +2282,14 @@ const AdminTeam = () => {
   const handleDelete = async (id: string, name: string) => {
     if (confirm(`Remover acesso de ${name}?`)) {
       try {
-        await deletePhotographer(id);
+        const { error } = await supabase
+          .schema('app_carsena')
+          .from('photographers')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+        
         toast.success("Acesso removido.");
         fetchAdmins();
       } catch (error: any) {

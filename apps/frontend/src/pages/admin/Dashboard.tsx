@@ -55,49 +55,46 @@ export const Dashboard = () => {
   const firstName = profile?.name ? profile.name.split(' ')[0] : "Fotógrafo";
   const currentDate = format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR });
 
-  const brlFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  const fmt = (v: number) => brlFormatter.format(v);
-
   const statCards = [
     {
       label: "Total Pago (Recebido)",
-      value: loading ? "..." : (stats ? stats.billing.formatted : "R$ 0,00"),
+      value: loading ? "..." : (stats?.billing?.formatted || "R$ 0,00"),
       sub: "Recebido dos clientes",
       icon: <TrendingUp size={20} />,
       color: "text-emerald-400",
     },
     {
       label: "Saldo Pendente",
-      value: loading ? "..." : (stats ? stats.pending.formatted : "R$ 0,00"),
+      value: loading ? "..." : (stats?.pending?.formatted || "R$ 0,00"),
       sub: "A receber ainda",
       icon: <AlertCircle size={20} />,
       color: "text-amber-400",
     },
     {
       label: "Ticket Médio",
-      value: loading ? "..." : (stats ? stats.avgTicket.formatted : "R$ 0,00"),
+      value: loading ? "..." : (stats?.avgTicket?.formatted || "R$ 0,00"),
       sub: "Por galeria paga",
       icon: <CreditCard size={20} />,
       color: "text-luxury-gold",
     },
     {
       label: "Sessões Publicadas",
-      value: loading ? "..." : (stats ? stats.sessions.active.toString() : "0"),
+      value: loading ? "..." : (stats?.sessions?.active?.toString() || "0"),
       sub: `de ${stats?.sessions?.total ?? 0} criadas`,
       icon: <Camera size={20} />,
       color: "text-blue-400",
     },
     {
       label: "Clientes Ativos",
-      value: loading ? "..." : (stats ? stats.customers.total.toString() : "0"),
+      value: loading ? "..." : (stats?.customers?.total?.toString() || "0"),
       sub: "Total de clientes",
       icon: <Users size={20} />,
       color: "text-purple-400",
     },
     {
       label: "Espaço (R2)",
-      value: loading ? "..." : (stats ? `${stats.storage.totalSizeGB} GB` : "---"),
-      sub: loading ? "..." : (stats ? (stats.storage.estimatedCostBRL > 0 ? `Custo Est.: ${stats.storage.formattedCostBRL}` : `Grátis (até 10GB)`) : "de 10 GB"),
+      value: loading ? "..." : (stats?.storage?.totalSizeGB ? `${stats.storage.totalSizeGB} GB` : "---"),
+      sub: loading ? "..." : (stats?.storage ? (stats.storage.estimatedCostBRL > 0 ? `Custo Est.: ${stats.storage.formattedCostBRL}` : `Grátis (até 10GB)`) : "de 10 GB"),
       icon: <Database size={20} />,
       color: "text-luxury-gold",
     },
