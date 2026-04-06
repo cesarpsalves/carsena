@@ -1,0 +1,51 @@
+services:
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: carsena-backend
+    restart: always
+    env_file:
+      - .env
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      # Redirecionamento HTTP -> HTTPS (API)
+      - "traefik.http.routers.carsena-api-http.rule=Host(`api.carsena.com.br`)"
+      - "traefik.http.routers.carsena-api-http.entrypoints=web"
+      - "traefik.http.routers.carsena-api-http.middlewares=redirect-to-https"
+      # Router HTTPS (API)
+      - "traefik.http.routers.carsena-api.rule=Host(`api.carsena.com.br`)"
+      - "traefik.http.routers.carsena-api.entrypoints=websecure"
+      - "traefik.http.routers.carsena-api.tls=true"
+      - "traefik.http.routers.carsena-api.tls.certresolver=le"
+      - "traefik.http.services.carsena-api.loadbalancer.server.port=3000"
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=https://api.carsena.com.br/api/v1
+    container_name: carsena-frontend
+    restart: always
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      # Redirecionamento HTTP -> HTTPS (Web)
+      - "traefik.http.routers.carsena-web-http.rule=Host(`carsena.com.br`) || Host(`www.carsena.com.br`)"
+      - "traefik.http.routers.carsena-web-http.entrypoints=web"
+      - "traefik.http.routers.carsena-web-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectScheme.scheme=https"
+      # Router HTTPS (Web)
+      - "traefik.http.routers.carsena-web.rule=Host(`carsena.com.br`) || Host(`www.carsena.com.br`)"
+      - "traefik.http.routers.carsena-web.entrypoints=websecure"
+      - "traefik.http.routers.carsena-web.tls=true"
+      - "traefik.http.routers.carsena-web.tls.certresolver=le"
+      - "traefik.http.services.carsena-web.loadbalancer.server.port=80"
+
+networks:
+  traefik-public:
+    external: true

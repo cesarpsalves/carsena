@@ -1,0 +1,9 @@
+{
+  "name": "@carsena/design-system",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.css",
+  "scripts": {
+    "build": "echo 'No build step needed for direct CSS'"
+  }
+}
