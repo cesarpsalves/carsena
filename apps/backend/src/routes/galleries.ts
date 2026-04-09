@@ -9,7 +9,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const { data, error } = await supabase
-      .from('app_carsena.galleries')
+      .from('galleries')
       .select('*')
       .eq('id', id)
       .single();
@@ -29,7 +29,7 @@ router.post('/', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from('app_carsena.galleries')
+      .from('galleries')
       .insert([{ 
         title, 
         description, 
@@ -55,7 +55,7 @@ router.patch('/:id', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from('app_carsena.galleries')
+      .from('galleries')
       .update(updates)
       .eq('id', id)
       .select()
@@ -90,7 +90,7 @@ router.post('/:id/photos/confirm', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from('app_carsena.photos')
+      .from('photos')
       .insert([{
         gallery_id,
         storage_path: versions.preview.storagePath, // Preview is used for default display
@@ -123,7 +123,7 @@ router.get('/:id/photos', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from('app_carsena.photos')
+      .from('photos')
       .select('*')
       .eq('gallery_id', gallery_id);
 
@@ -148,7 +148,7 @@ router.delete('/:id/photos/:photoId', async (req, res) => {
   try {
     // 1. Get photo storage path
     const { data: photo, error: fetchError } = await supabase
-      .from('app_carsena.photos')
+      .from('photos')
       .select('storage_path')
       .eq('id', photoId)
       .single();
@@ -160,7 +160,7 @@ router.delete('/:id/photos/:photoId', async (req, res) => {
 
     // 3. Delete from DB
     const { error: deleteError } = await supabase
-      .from('app_carsena.photos')
+      .from('photos')
       .delete()
       .eq('id', photoId);
 

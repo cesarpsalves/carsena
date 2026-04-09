@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
+import { getStoragePublicUrl } from '../../lib/storage';
 
 type Experience = {
   id: string;
@@ -48,7 +49,10 @@ export const ExperienceHome = () => {
         const { data: galleries, error: gError } = await supabase
           .schema('app_carsena')
           .from('galleries')
-          .select('*')
+          .select(`
+            *,
+            photos ( id, thumbnail_path, storage_path, is_processed )
+          `)
           .eq('customer_id', customer.id);
 
         if (gError) throw gError;
@@ -61,13 +65,17 @@ export const ExperienceHome = () => {
           if (g.status === 'draft') statusLabel = 'EM PREPARAÇÃO';
           else if (isPending) statusLabel = 'AGUARDANDO PAGAMENTO';
 
+          // Pick the first processed photo as thumbnail if thumbnail_url is not explicitly set
+          const firstPhoto = (g.photos || []).find((p: any) => p.is_processed !== false);
+          const galleryImage = g.thumbnail_url || (firstPhoto ? getStoragePublicUrl(firstPhoto.thumbnail_path || firstPhoto.storage_path) : "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=1000&auto=format&fit=crop");
+
           return {
             id: g.id,
             title: g.title,
             type: 'Galeria',
             typeIcon: <Camera size={14} />,
             status: statusLabel.toLowerCase(),
-            image: g.thumbnail_url || "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=1000&auto=format&fit=crop",
+            image: galleryImage,
             date: new Date(g.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }),
             path: `/cliente/galeria/${g.id}`,
             isPending: isPending,

@@ -89,6 +89,38 @@ router.post("/upload-direct", async (req, res) => {
 });
 
 /**
+ * POST /api/storage/portfolio-upload
+ * Generates a presigned URL for direct upload to R2 inside the portfolio/ folder.
+ * No gallery association needed.
+ */
+router.post("/portfolio-upload", async (req, res) => {
+  const { contentType, fileName } = req.body;
+
+  if (!contentType || !fileName) {
+    return res.status(400).json({ error: "Missing required fields: contentType, fileName" });
+  }
+
+  try {
+    const fileExtension = fileName.split(".").pop()?.toLowerCase() || "jpg";
+    const uuid = crypto.randomUUID();
+    const storagePath = `portfolio/${uuid}.${fileExtension}`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME || "fotografia",
+      Key: storagePath,
+      ContentType: contentType,
+    });
+
+    const url = await getSignedUrl(r2, command, { expiresIn: 300 });
+
+    res.json({ url, storagePath });
+  } catch (error: any) {
+    console.error("Error generating portfolio presigned URL:", error);
+    res.status(500).json({ error: "Failed to generate portfolio upload URL", details: error.message });
+  }
+});
+
+/**
  * DELETE /api/storage/bulk
  * Deletes arbitrary objects directly from Cloudflare R2
  */

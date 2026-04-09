@@ -7,7 +7,7 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('app_carsena.events')
+      .from('events')
       .select(`
         *,
         ticket_tiers (*)
@@ -27,7 +27,7 @@ router.get('/:id', async (req, res) => {
 
   try {
     const { data: event, error: eventError } = await supabase
-      .from('app_carsena.events')
+      .from('events')
       .select(`
         *,
         ticket_tiers (*)

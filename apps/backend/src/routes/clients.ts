@@ -7,7 +7,7 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('app_carsena.customers')
+      .from('customers')
       .select('*')
       .order('name');
 
@@ -23,7 +23,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const { data, error } = await supabase
-      .from('app_carsena.customers')
+      .from('customers')
       .select('*')
       .eq('id', id)
       .single();
@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from('app_carsena.customers')
+      .from('customers')
       .insert([{ name, email, phone }])
       .select()
       .single();
@@ -60,7 +60,7 @@ router.put('/:id', async (req, res) => {
 
   try {
     const { data, error } = await supabase
-      .from('app_carsena.customers')
+      .from('customers')
       .update({ name, email, phone, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
@@ -79,7 +79,7 @@ router.delete('/:id', async (req, res) => {
 
   try {
     const { error } = await supabase
-      .from('app_carsena.customers')
+      .from('customers')
       .delete()
       .eq('id', id);
 

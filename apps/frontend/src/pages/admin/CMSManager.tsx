@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AdminLayout } from "../../components/layout/AdminLayout";
 import { 
   Save, 
@@ -15,7 +15,10 @@ import {
   Trash2,
   Ticket,
   ShieldCheck,
-  CreditCard
+  CreditCard,
+  GripVertical,
+  Upload,
+  X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -24,11 +27,14 @@ import type { LandingSettings, LandingSection } from "@/lib/cms";
 import { eventService } from "@/lib/events";
 import type { Event, TicketTier } from "@/lib/events";
 import { getStoragePublicUrl } from '@/lib/storage';
+import { portfolioService, getPortfolioPublicUrl } from "@/lib/portfolio";
+import type { PortfolioImage } from "@/lib/portfolio";
 
 const tabs = [
   { id: "identity", label: "Identidade", icon: <SettingsIcon size={18} /> },
   { id: "sections", label: "Seções & Ordem", icon: <LayoutGrid size={18} /> },
   { id: "content", label: "Conteúdo", icon: <Type size={18} /> },
+  { id: "portfolio", label: "Portfólio", icon: <ImageIcon size={18} /> },
   { id: "events", label: "Eventos & Ingressos", icon: <Calendar size={18} /> },
   { id: "coupons", label: "Cupons", icon: <Ticket size={18} /> },
   { id: "premium", label: "Premium", icon: <ShieldCheck size={18} /> },
@@ -46,6 +52,14 @@ export const CMSManager = () => {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [editingCoupon, setEditingCoupon] = useState<any | null>(null);
 
+  // Portfolio state
+  const [portfolioImages, setPortfolioImages] = useState<PortfolioImage[]>([]);
+  const [portfolioUploading, setPortfolioUploading] = useState(false);
+  const [portfolioDragOver, setPortfolioDragOver] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const portfolioFileRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -53,21 +67,81 @@ export const CMSManager = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [settingsData, sectionsData, eventsData, couponsData] = await Promise.all([
+      const [settingsData, sectionsData, eventsData, couponsData, portfolioData] = await Promise.all([
         cmsService.getSettings(),
         cmsService.getSections(),
         eventService.getAllEventsAdmin(),
         cmsService.getCoupons(),
+        portfolioService.getImages(),
       ]);
       setSettings(settingsData);
       setSections(sectionsData);
       setEvents(eventsData);
       setCoupons(couponsData);
+      setPortfolioImages(portfolioData);
     } catch (error) {
       console.error("Error fetching CMS data:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // ── Portfolio helpers ────────────────────────────────────────────────────
+
+  const handlePortfolioFiles = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setPortfolioUploading(true);
+    try {
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      const uploads = Array.from(files).filter(f => validTypes.includes(f.type));
+      for (const file of uploads) {
+        const created = await portfolioService.uploadImage(file, {});
+        setPortfolioImages(prev => [...prev, created]);
+      }
+    } catch (error) {
+      console.error('Error uploading portfolio image:', error);
+    } finally {
+      setPortfolioUploading(false);
+    }
+  }, []);
+
+  const handlePortfolioDelete = async (id: string) => {
+    if (!confirm('Remover esta foto do portfólio?')) return;
+    await portfolioService.deleteImage(id);
+    setPortfolioImages(prev => prev.filter(img => img.id !== id));
+  };
+
+  const handlePortfolioMetaChange = async (
+    id: string,
+    field: 'title' | 'category',
+    value: string
+  ) => {
+    setPortfolioImages(prev =>
+      prev.map(img => img.id === id ? { ...img, [field]: value } : img)
+    );
+  };
+
+  const handlePortfolioMetaSave = async (img: PortfolioImage) => {
+    await portfolioService.updateImage(img.id, { title: img.title ?? '', category: img.category ?? '' });
+  };
+
+  // Drag-to-reorder handlers
+  const handleDragStart = (index: number) => setDraggedIndex(index);
+  const handleDragEnter = (index: number) => setDragOverIndex(index);
+  const handleDragEnd = async () => {
+    if (draggedIndex === null || dragOverIndex === null || draggedIndex === dragOverIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    const reordered = [...portfolioImages];
+    const [moved] = reordered.splice(draggedIndex, 1);
+    reordered.splice(dragOverIndex, 0, moved);
+    const withOrder = reordered.map((img, i) => ({ ...img, display_order: i }));
+    setPortfolioImages(withOrder);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    await portfolioService.reorder(withOrder.map(img => ({ id: img.id, display_order: img.display_order })));
   };
 
   const handleSave = async () => {
@@ -257,6 +331,149 @@ export const CMSManager = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "portfolio" && (
+              <motion.div
+                key="portfolio"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-10"
+              >
+                <div className="space-y-2">
+                  <h3 className="text-serif text-2xl text-luxury-cream italic">Fotos do Portfólio</h3>
+                  <p className="text-xs text-luxury-cream/40 max-w-lg">
+                    Arraste fotos para adicionar ou reorganizar. Qualquer tamanho ou orientação funciona — o site enquadra automaticamente.
+                  </p>
+                </div>
+
+                {/* Drop zone / upload trigger */}
+                <div
+                  onClick={() => portfolioFileRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setPortfolioDragOver(true); }}
+                  onDragLeave={() => setPortfolioDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setPortfolioDragOver(false);
+                    handlePortfolioFiles(e.dataTransfer.files);
+                  }}
+                  className={cn(
+                    "border-2 border-dashed rounded-none p-10 flex flex-col items-center justify-center gap-4 cursor-pointer transition-all duration-300",
+                    portfolioDragOver
+                      ? "border-luxury-gold bg-luxury-gold/5"
+                      : "border-white/10 hover:border-white/30 hover:bg-white/2"
+                  )}
+                >
+                  {portfolioUploading ? (
+                    <>
+                      <div className="w-8 h-[1px] bg-luxury-gold animate-pulse" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold">Enviando...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={28} className="text-luxury-cream/30" />
+                      <div className="text-center">
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-luxury-cream/60">Clique ou arraste as fotos aqui</p>
+                        <p className="text-[9px] text-luxury-cream/30 mt-1">JPG, PNG, WEBP · qualquer tamanho</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <input
+                  ref={portfolioFileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handlePortfolioFiles(e.target.files)}
+                />
+
+                {/* Image grid */}
+                {portfolioImages.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {portfolioImages.map((img, index) => (
+                      <div
+                        key={img.id}
+                        draggable
+                        onDragStart={() => handleDragStart(index)}
+                        onDragEnter={() => handleDragEnter(index)}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={(e) => e.preventDefault()}
+                        className={cn(
+                          "group relative flex flex-col bg-black/40 border transition-all duration-200 cursor-grab active:cursor-grabbing",
+                          dragOverIndex === index && draggedIndex !== index
+                            ? "border-luxury-gold scale-105"
+                            : "border-white/10 hover:border-white/30"
+                        )}
+                      >
+                        {/* Photo */}
+                        <div className="relative aspect-[3/4] overflow-hidden bg-black/20">
+                          <img
+                            src={getPortfolioPublicUrl(img.storage_path)}
+                            alt={img.title || `Foto ${index + 1}`}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                          {/* Overlay actions */}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-start justify-between p-3">
+                            <GripVertical size={16} className="text-white/60" />
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handlePortfolioDelete(img.id); }}
+                              className="p-1 bg-red-500/80 hover:bg-red-500 text-white rounded-full transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                          {/* Position badge */}
+                          <div className="absolute bottom-2 left-2 w-5 h-5 bg-luxury-gold flex items-center justify-center">
+                            <span className="text-[8px] font-black text-black">{index + 1}</span>
+                          </div>
+                        </div>
+
+                        {/* Inline metadata */}
+                        <div className="p-3 space-y-2">
+                          <input
+                            type="text"
+                            placeholder="Título (opcional)"
+                            value={img.title || ''}
+                            onChange={(e) => handlePortfolioMetaChange(img.id, 'title', e.target.value)}
+                            onBlur={() => handlePortfolioMetaSave(img)}
+                            className="w-full bg-transparent border-b border-white/10 py-1 text-[10px] text-luxury-cream placeholder:text-luxury-cream/20 focus:border-luxury-gold outline-none transition-colors"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Categoria (ex: Casamento)"
+                            value={img.category || ''}
+                            onChange={(e) => handlePortfolioMetaChange(img.id, 'category', e.target.value)}
+                            onBlur={() => handlePortfolioMetaSave(img)}
+                            className="w-full bg-transparent border-b border-white/10 py-1 text-[9px] text-luxury-gold/60 placeholder:text-luxury-cream/20 focus:border-luxury-gold outline-none transition-colors"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {portfolioImages.length === 0 && !portfolioUploading && (
+                  <div className="py-12 text-center border border-dashed border-white/5">
+                    <ImageIcon size={32} className="mx-auto mb-4 text-luxury-cream/10" />
+                    <p className="text-luxury-cream/20 text-xs uppercase tracking-widest italic">
+                      Nenhuma foto adicionada. As imagens padrão aparecem no site enquanto vazio.
+                    </p>
+                  </div>
+                )}
+
+                {/* Info note */}
+                <div className="p-4 bg-luxury-gold/5 border border-luxury-gold/20 flex items-start gap-3">
+                  <div className="w-1 h-full min-h-[32px] bg-luxury-gold flex-shrink-0" />
+                  <p className="text-[9px] text-luxury-cream/40 leading-relaxed">
+                    <span className="text-luxury-gold font-bold">Dica:</span> A ordem das fotos no grid define o layout do site.
+                    A 1ª foto fica em destaque (maior). Arraste para reorganizar.
+                    Se remover todas, as fotos demonstração voltam automaticamente.
+                  </p>
                 </div>
               </motion.div>
             )}
