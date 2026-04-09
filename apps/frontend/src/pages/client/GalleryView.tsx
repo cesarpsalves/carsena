@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, 
@@ -53,6 +53,8 @@ export const GalleryView = () => {
   const [loading, setLoading] = useState(true);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const constraintsRef = useRef(null);
 
   const fetchGalleryData = useCallback(async () => {
     if (!id) return;
@@ -194,12 +196,16 @@ export const GalleryView = () => {
     if (nextIndex >= photos.length) nextIndex = 0;
 
     setSelectedPhoto(photos[nextIndex]);
+    setIsZoomed(false);
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!selectedPhoto) return;
-      if (e.key === 'Escape') setSelectedPhoto(null);
+      if (e.key === 'Escape') {
+        setSelectedPhoto(null);
+        setIsZoomed(false);
+      }
       if (e.key === 'ArrowRight') navigatePhoto('next');
       if (e.key === 'ArrowLeft') navigatePhoto('prev');
     };
@@ -487,27 +493,48 @@ export const GalleryView = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-2xl flex flex-col pt-10"
+            className="fixed inset-0 z-[200] bg-black/98 backdrop-blur-3xl flex flex-col pt-6 md:pt-10 overflow-hidden"
           >
-            <div className="px-8 flex items-center justify-between mb-8">
-               <div className="flex items-center gap-6">
-                 <button onClick={() => setSelectedPhoto(null)} className="p-3 text-white/40 hover:text-white transition-colors flex items-center gap-3 text-[10px] font-bold tracking-widest uppercase">
-                   <X size={20} /> Fechar
+            {/* Modal Header */}
+            <div className="px-6 md:px-12 flex items-center justify-between mb-4 md:mb-8 z-20">
+               <div className="flex items-center gap-4 md:gap-6">
+                 <button 
+                  onClick={() => {
+                    setSelectedPhoto(null);
+                    setIsZoomed(false);
+                  }} 
+                  className="p-2 md:p-3 text-white/40 hover:text-white transition-colors flex items-center gap-2 md:gap-3 text-[10px] font-bold tracking-widest uppercase hover:bg-white/5 rounded-lg"
+                 >
+                   <X size={20} /> <span className="hidden sm:inline">Fechar</span>
                  </button>
-                 <div className="h-4 w-px bg-white/10" />
-                 <p className="text-[10px] text-white/40 uppercase tracking-widest font-medium">{selectedPhoto.filename}</p>
+                 <div className="h-4 w-px bg-white/10 hidden sm:block" />
+                 <p className="text-[10px] text-white/40 uppercase tracking-widest font-medium hidden md:block max-w-[200px] truncate">
+                   {selectedPhoto.filename}
+                 </p>
                </div>
                
-               <div className="flex items-center gap-4">
+               <div className="flex items-center gap-2 md:gap-4">
+                 <button 
+                  onClick={() => setIsZoomed(!isZoomed)}
+                  className={cn(
+                    "p-3 md:p-4 rounded-full border transition-all hover:scale-105 active:scale-95",
+                    isZoomed ? "bg-white border-white text-black" : "border-white/10 text-white hover:border-[#d4af37] hover:text-[#d4af37]"
+                  )}
+                  title={isZoomed ? "Reduzir" : "Aumentar"}
+                 >
+                   <Maximize2 size={18} />
+                 </button>
+
                  <button 
                   onClick={() => toggleFavorite(selectedPhoto.id)}
                   className={cn(
-                    "p-4 rounded-full border transition-all",
+                    "p-3 md:p-4 rounded-full border transition-all hover:scale-105 active:scale-95",
                     selectedPhoto.isFavorite ? "bg-[#d4af37] border-[#d4af37] text-black" : "border-white/10 text-white hover:text-[#d4af37]"
                   )}
                  >
-                   <Heart size={20} fill={selectedPhoto.isFavorite ? "black" : "none"} />
+                   <Heart size={18} fill={selectedPhoto.isFavorite ? "black" : "none"} />
                  </button>
+
                  {isPhotoUnlocked(selectedPhoto) && (
                    <button 
                     onClick={() => {
@@ -518,57 +545,108 @@ export const GalleryView = () => {
                       link.click();
                       document.body.removeChild(link);
                     }}
-                    className="px-8 py-4 bg-white text-black text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-[#d4af37] transition-all"
+                    className="px-6 md:px-8 py-3 md:py-4 bg-white text-black text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-[#d4af37] transition-all hover:scale-105 active:scale-95"
                    >
-                     Baixar em HD
+                     <span className="hidden sm:inline">Baixar HD</span>
+                     <Download size={14} className="sm:hidden" />
                    </button>
                  )}
                </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center p-4 md:p-12 relative group/modal">
-               {/* Navigation Arrows */}
-               <button 
-                onClick={(e) => { e.stopPropagation(); navigatePhoto('prev'); }}
-                className="absolute left-4 md:left-12 z-10 p-4 bg-white/5 hover:bg-white/10 rounded-full text-white/20 hover:text-white transition-all opacity-0 group-hover/modal:opacity-100"
-               >
-                 <ArrowLeft size={32} strokeWidth={1} />
-               </button>
+            {/* Main Image Viewport */}
+            <div className="flex-1 relative flex items-center justify-center overflow-hidden cursor-default group/modal">
+               {/* Navigation Arrows - Hidden when zoomed */}
+               {!isZoomed && (
+                 <>
+                   <button 
+                    onClick={(e) => { e.stopPropagation(); navigatePhoto('prev'); }}
+                    className="absolute left-4 md:left-12 z-30 p-4 bg-black/40 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all backdrop-blur-md border border-white/5 opacity-0 group-hover/modal:opacity-100 hidden md:flex"
+                   >
+                     <ArrowLeft size={32} strokeWidth={1.5} />
+                   </button>
 
-               <img 
-                src={!isPhotoUnlocked(selectedPhoto) ? selectedPhoto.watermarkUrl : selectedPhoto.url} 
-                alt="Full Preview" 
-                className="max-w-full max-h-[75vh] md:max-h-full object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)] select-none"
-                onContextMenu={(e) => e.preventDefault()}
-               />
+                   <button 
+                    onClick={(e) => { e.stopPropagation(); navigatePhoto('next'); }}
+                    className="absolute right-4 md:right-12 z-30 p-4 bg-black/40 hover:bg-white/10 rounded-full text-white/40 hover:text-white transition-all backdrop-blur-md border border-white/5 opacity-0 group-hover/modal:opacity-100 hidden md:flex"
+                   >
+                     <ArrowRight size={32} strokeWidth={1.5} />
+                   </button>
+                 </>
+               )}
 
-               <button 
-                onClick={(e) => { e.stopPropagation(); navigatePhoto('next'); }}
-                className="absolute right-4 md:right-12 z-10 p-4 bg-white/5 hover:bg-white/10 rounded-full text-white/20 hover:text-white transition-all opacity-0 group-hover/modal:opacity-100"
-               >
-                 <ArrowRight size={32} strokeWidth={1} />
-               </button>
+               <div 
+                ref={constraintsRef}
+                className={cn(
+                  "relative w-full h-full flex items-center justify-center p-4 md:p-12",
+                  isZoomed ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+               )}>
+                 <motion.div
+                  drag={isZoomed}
+                  dragConstraints={{
+                    left: -800,
+                    right: 800,
+                    top: -1200,
+                    bottom: 1200
+                  }}
+                  dragElastic={0.1}
+                  dragMomentum={true}
+                  animate={{ 
+                    scale: isZoomed ? 2.5 : 1,
+                    x: isZoomed ? undefined : 0,
+                    y: isZoomed ? undefined : 0
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  className="relative max-w-full max-h-full flex items-center justify-center select-none"
+                  onDoubleClick={() => setIsZoomed(!isZoomed)}
+                 >
+                   <img 
+                    src={!isPhotoUnlocked(selectedPhoto) ? selectedPhoto.watermarkUrl : selectedPhoto.url} 
+                    alt="Full Preview" 
+                    className={cn(
+                      "max-w-full max-h-[80vh] md:max-h-[85vh] object-contain shadow-2xl transition-shadow",
+                      isZoomed ? "shadow-[0_0_100px_rgba(0,0,0,0.8)]" : "shadow-[0_0_50px_rgba(0,0,0,0.3)]"
+                    )}
+                    draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
+                   />
 
-               {!isPhotoUnlocked(selectedPhoto) && (
-                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
-                    <p className="text-white font-black text-[20vw] rotate-12 select-none tracking-[2em]">CARSENA</p>
+                   {!isPhotoUnlocked(selectedPhoto) && (
+                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05]">
+                        <p className="text-white font-black text-[15vw] rotate-12 select-none tracking-[1.5em] whitespace-nowrap">CARSENA</p>
+                     </div>
+                   )}
+                 </motion.div>
+               </div>
+               
+               {/* Mobile Hint */}
+               {!isZoomed && (
+                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[8px] text-white/20 uppercase tracking-[0.3em] font-bold md:hidden">
+                   Toque duplo para zoom • Deslize para navegar
                  </div>
                )}
             </div>
 
-            <div className="h-28 md:h-36 flex items-center justify-center p-6 bg-black/60 border-t border-white/5">
-               <div className="flex items-center gap-3 overflow-x-auto no-scrollbar max-w-5xl px-8 py-2">
+            {/* Thumbnail Strip */}
+            <div className="h-24 md:h-32 flex flex-col items-center justify-center p-4 bg-black/80 border-t border-white/5 z-20">
+               <div className="flex items-center gap-3 overflow-x-auto no-scrollbar max-w-full px-6 py-2 scroll-smooth">
                   {photos.map((p, i) => (
                     <button 
                       key={p.id}
-                      onClick={() => setSelectedPhoto(p)}
+                      id={`thumb-${p.id}`}
+                      onClick={() => {
+                        setSelectedPhoto(p);
+                        setIsZoomed(false);
+                      }}
                       className={cn(
-                        "w-12 h-16 md:w-16 md:h-20 flex-shrink-0 border-2 transition-all opacity-50 hover:opacity-100 hover:scale-105",
-                        selectedPhoto.id === p.id ? "border-[#d4af37] opacity-100 scale-110 grayscale-0" : "border-transparent grayscale"
+                        "relative w-12 h-16 md:w-16 md:h-20 flex-shrink-0 border-2 transition-all duration-300",
+                        selectedPhoto.id === p.id 
+                          ? "border-[#d4af37] opacity-100 scale-105 z-10" 
+                          : "border-transparent opacity-40 hover:opacity-100 grayscale hover:grayscale-0"
                       )}
                     >
-                      <img src={p.thumbnailUrl} className="w-full h-full object-cover" />
-                      <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[8px] text-center text-white/40">{i+1}</div>
+                      <img src={p.thumbnailUrl} className="w-full h-full object-cover" draggable={false} />
+                      <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[8px] text-center text-white/40 py-0.5">{i+1}</div>
                     </button>
                   ))}
                </div>

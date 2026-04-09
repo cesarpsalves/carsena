@@ -141,6 +141,7 @@ export const AdminGalleries = () => {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedGallery, setSelectedGallery] = useState<any>(null);
+  const [revealedCodes, setRevealedCodes] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('manual');
@@ -184,6 +185,15 @@ export const AdminGalleries = () => {
     email: '',
     phone: ''
   });
+  
+  const toggleCodeVisibility = (id: string) => {
+    setRevealedCodes(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const copyOnlyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success("Código de acesso copiado!");
+  };
 
   useEffect(() => {
     fetchData();
@@ -525,8 +535,31 @@ export const AdminGalleries = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: i * 0.05 }}
-        className="bg-[#1A1A1A] border border-white/10 overflow-hidden group hover:border-luxury-gold transition-all cursor-pointer shadow-2xl flex flex-col"
+        className="bg-[#1A1A1A] border border-white/10 overflow-hidden group hover:border-luxury-gold transition-all shadow-2xl flex flex-col relative"
       >
+        {/* Access Code Reveal Badge - Discretely placed */}
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-20 opacity-0 group-hover:opacity-100 transition-all">
+           <div className="bg-black/80 backdrop-blur-xl border border-white/10 px-4 py-2 flex items-center gap-3 rounded-full shadow-2xl">
+              <span className="text-[10px] font-mono tracking-widest text-[#d4af37]">
+                {revealedCodes[gallery.id] ? gallery.access_code : '••••••'}
+              </span>
+              <button 
+                onClick={(e) => { e.stopPropagation(); toggleCodeVisibility(gallery.id); }}
+                className="text-white/40 hover:text-white transition-colors p-1"
+              >
+                {revealedCodes[gallery.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+              {revealedCodes[gallery.id] && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); copyOnlyCode(gallery.access_code); }}
+                  className="text-white/20 hover:text-white transition-colors p-1"
+                >
+                  <Copy size={12} />
+                </button>
+              )}
+           </div>
+        </div>
+
         {/* Visual Preview Area - NO GRAYSCALE, High Visibility */}
         <div 
           onClick={() => { setSelectedGallery(gallery); setIsEditModalOpen(true); }}
@@ -792,7 +825,17 @@ export const AdminGalleries = () => {
                     <td className="p-6">
                       <p className="text-xs uppercase tracking-widest font-bold">{customer.name}</p>
                       <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">{customer.email} • {customer.phone || 'Sem Telefone'}</p>
-                      <p className="text-[8px] text-luxury-gold/60 uppercase tracking-widest mt-0.5">Cód: {customer.access_code}</p>
+                      <div className="flex items-center gap-3 mt-1.5">
+                         <p className="text-[8px] text-luxury-gold/60 uppercase tracking-widest">
+                           Cód: {revealedCodes[customer.id] ? customer.access_code : '••••' }
+                         </p>
+                         <button 
+                          onClick={() => toggleCodeVisibility(customer.id)}
+                          className="text-luxury-gold/30 hover:text-luxury-gold transition-colors"
+                         >
+                           {revealedCodes[customer.id] ? <EyeOff size={10} /> : <Eye size={10} />}
+                         </button>
+                      </div>
                     </td>
                     <td className="p-6">
                       <span className="text-[10px] text-luxury-cream/50 font-bold">
