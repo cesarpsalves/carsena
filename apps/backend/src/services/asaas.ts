@@ -13,7 +13,7 @@ const ASAAS_API_URL = ASAAS_ENVIRONMENT === 'production'
 const asaasClient = axios.create({
   baseURL: ASAAS_API_URL,
   headers: {
-    'access_token': ASAAS_API_KEY,
+    'access_token': ASAAS_API_KEY.trim(),
     'Content-Type': 'application/json',
   },
 });
