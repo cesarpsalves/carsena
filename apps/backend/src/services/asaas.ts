@@ -1,8 +1,7 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.join(__dirname, '../../../../.env') });
+// Redundant dotenv call removed, now handled in index.ts
 
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY || '';
 const ASAAS_ENVIRONMENT = process.env.ASAAS_ENVIRONMENT || 'sandbox';

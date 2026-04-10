@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.join(__dirname, '../../../../.env') });
+// Redundant dotenv call removed, now handled in index.ts
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';

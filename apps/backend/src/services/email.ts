@@ -1,8 +1,7 @@
 import { Resend } from 'resend';
 import path from 'path';
-import dotenv from 'dotenv';
 
-dotenv.config({ path: path.join(__dirname, '../../../../.env') });
+// Redundant dotenv call removed, now handled in index.ts
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM || 'Carsena <onboarding@resend.dev>';

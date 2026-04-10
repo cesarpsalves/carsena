@@ -1,11 +1,17 @@
+import path from 'path';
+import dotenv from 'dotenv';
+
+// 1. CARREGAMENTO DO AMBIENTE (DEVE SER O PRIMEIRO COMANDO)
+const envPath = path.resolve(process.cwd(), '.env');
+dotenv.config({ path: envPath });
+
+console.log(`🌍 Environment loaded from: ${envPath}`);
+
+// 2. IMPORTS LOCAIS (APÓS O ENV)
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-// import dotenv from 'dotenv';
-const dotenv = require('dotenv');
-import path from 'path';
-
 import { cmsRouter } from './routes/cms';
 import { galleriesRouter } from './routes/galleries';
 import { paymentsRouter } from './routes/payments';
@@ -17,9 +23,6 @@ import storageRouter from './routes/storage';
 import authRouter from './routes/auth';
 import emailRouter from './routes/emails';
 import ticketsRouter from './routes/tickets';
-
-// Carrega o .env da raiz do monorepo
-dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
 const app = express();
 const port = process.env.PORT || 3000;
