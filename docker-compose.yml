@@ -5,8 +5,8 @@ services:
       dockerfile: apps/backend/Dockerfile
     container_name: carsena-backend
     restart: always
-    env_file:
-      - .env
+    volumes:
+      - .env:/app/.env
     networks:
       - traefik-public
     labels:

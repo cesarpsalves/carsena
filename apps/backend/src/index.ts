@@ -7,7 +7,17 @@ dotenv.config({ path: envPath });
 
 console.log(`🌍 Environment loaded from: ${envPath}`);
 
-// 2. IMPORTS LOCAIS (APÓS O ENV)
+// Debug logs (masked)
+const maskKey = (key?: string) => {
+  if (!key) return 'MISSING';
+  if (key.length < 8) return 'PRESENT (TOO SHORT)';
+  return `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
+};
+
+console.log('🔑 API Verification:');
+console.log(` - ASAAS_API_KEY: ${maskKey(process.env.ASAAS_API_KEY)}`);
+console.log(` - RESEND_API_KEY: ${maskKey(process.env.RESEND_API_KEY)}`);
+console.log(` - ASAAS_ENV: ${process.env.ASAAS_ENVIRONMENT || 'sandbox'}`);
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
