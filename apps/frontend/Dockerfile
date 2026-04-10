@@ -15,9 +15,11 @@ RUN npm install
 # Copia o código fonte
 COPY . .
 
+# Define argumentos de build (passados pelo docker-compose)
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 # Builda o frontend
-# Nota: O VITE_API_URL pode ser passado via --build-arg se necessário,
-# mas aqui estamos focando em restaurar o processo de build.
 RUN npm run build -w @carsena/frontend
 
 # Stage 2: Production

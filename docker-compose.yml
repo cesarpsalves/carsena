@@ -27,7 +27,7 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
       args:
-        - VITE_API_URL=https://api.carsena.com.br/api/v1
+        - VITE_API_URL=https://api.carsena.com.br/api
     container_name: carsena-frontend
     restart: always
     networks:
