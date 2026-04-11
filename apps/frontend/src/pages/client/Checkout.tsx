@@ -7,12 +7,14 @@ import {
   ShieldCheck, 
   Copy, 
   ExternalLink,
-  Clock
+  Clock,
+  AlertCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "../../lib/utils";
 
 export const Checkout = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +26,35 @@ export const Checkout = () => {
   const [pixData, setPixData] = useState<any>(null);
   const [verifying, setVerifying] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD'>('PIX');
+  const [cpf, setCpf] = useState("");
+
+  const maskCPF = (value: string) => {
+    return value
+      .replace(/\D/g, "")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+      .replace(/(-\d{2})\d+?$/, "$1");
+  };
+
+  const isValidCPF = (cpf: string) => {
+    const cleanCPF = cpf.replace(/\D/g, '');
+    if (cleanCPF.length !== 11) return false;
+    if (/^(\d)\1+$/.test(cleanCPF)) return false;
+    let sum = 0;
+    let remainder;
+    for (let i = 1; i <= 9; i++) sum = sum + parseInt(cleanCPF.substring(i - 1, i)) * (11 - i);
+    remainder = (sum * 10) % 11;
+    if ((remainder === 10) || (remainder === 11)) remainder = 0;
+    if (remainder !== parseInt(cleanCPF.substring(9, 10))) return false;
+    sum = 0;
+    for (let i = 1; i <= 10; i++) sum = sum + parseInt(cleanCPF.substring(i - 1, i)) * (12 - i);
+    remainder = (sum * 10) % 11;
+    if ((remainder === 10) || (remainder === 11)) remainder = 0;
+    if (remainder !== parseInt(cleanCPF.substring(10, 11))) return false;
+    return true;
+  };
 
   const fetchGallery = useCallback(async () => {
     if (!id) return;
