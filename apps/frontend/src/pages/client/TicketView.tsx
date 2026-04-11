@@ -63,7 +63,7 @@ export const TicketView = () => {
     event_date: ticket.events?.date || new Date().toISOString(),
     event_location: ticket.events?.location || "Local não informado",
     tier_name: ticket.ticket_tiers?.name || "Ingresso",
-    ticket_code: ticket.ticket_code,
+    ticket_code: ticket.qr_code || ticket.id,
     tier_price: ticket.ticket_tiers?.price
   };
 

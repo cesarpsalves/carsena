@@ -116,7 +116,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket }) => {
             
             <div className="space-y-1 block">
                <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-widest text-white/40"><Hash size={12} /> Referência</span>
-               <p className="text-xs font-mono text-white/80">{ticket.ticket_code.substring(0, 8)}</p>
+               <p className="text-xs font-mono text-white/80">{(ticket.ticket_code || '').substring(0, 8)}</p>
             </div>
 
             <div className="space-y-1 block">
