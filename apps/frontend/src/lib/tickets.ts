@@ -30,7 +30,8 @@ export const ticketService = {
           name
         )
       `)
-      .eq('id', ticketId)
+      .or(`id.eq.${ticketId},order_id.eq.${ticketId}`)
+      .limit(1)
       .single();
 
     if (error) throw error;

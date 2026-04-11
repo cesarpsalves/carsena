@@ -38,39 +38,22 @@ export class TicketService {
        return { success: false, error: 'Order not found' };
     }
 
-    // Fetch customer info - try to get from asaas_customers mapping or the orders table if available
-    let customerEmail = 'unknown@example.com';
-    let customerName = 'Cliente';
+    // Fetch customer info - prioritizing the new columns on the order
+    let customerEmail = order.customer_email || 'unknown@example.com';
+    let customerName = order.customer_name || 'Cliente';
     let customerId = order.customer_id;
 
-    if (order.asaas_payment_id) {
-        // Find by asaas payment
-        const { data: asaasPayment } = await supabase
-            .from('payment_webhooks') // We might not have this, better use asaas_customers mapping
-            .select('payload')
-            .eq('id', order.asaas_payment_id) // This is probably wrong, search by asaas_payment_id
-            .single();
-    }
-
-    // Best way: find by the order reference usually stored in asaas_customers or just pass it
-    // For now, let's look at asaas_payment_id and match it back to customers
-    // Ref: webhooks.ts line 92
-    
-    // We need to find the asaas customer ID associated with this payment ID or order
-    // But since we are calling this from webhook or manual, we might already have it.
-    // If called from manual admin, we might need to lookup the order metadata.
-    
-    // For now, let's try to get customer from asaas_customers metadata
-    const { data: customerMap } = await supabase
-      .from('asaas_customers')
-      .select('metadata, customer_id')
-      .filter('metadata->>email', 'eq', order.customer_email || ''); // If we have customer_email on order
-
-    // Fallback logic to find customer
-    if (customerMap && customerMap.length > 0) {
-        customerEmail = customerMap[0].metadata.email;
-        customerName = customerMap[0].metadata.name;
-        customerId = customerMap[0].customer_id;
+    if (customerEmail === 'unknown@example.com' && order.customer_id) {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('name, email')
+        .eq('id', order.customer_id)
+        .single();
+      
+      if (customer) {
+        customerEmail = customer.email;
+        customerName = customer.name;
+      }
     }
 
     // 3. Generate tickets
@@ -91,6 +74,7 @@ export class TicketService {
           .insert([{
             event_id: tier.event_id,
             tier_id: item.resource_id,
+            order_id: orderId,
             status: 'active',
             qr_code: ticketCode,
             payment_id: order.asaas_payment_id || order.id,

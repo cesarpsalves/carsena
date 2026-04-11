@@ -40,7 +40,8 @@ export class GoogleWalletService {
       .select(`
         *,
         event:events(*),
-        tier:ticket_tiers(*)
+        tier:ticket_tiers(*),
+        customer:customers(name, email)
       `)
       .eq('id', ticketId)
       .single();
@@ -78,7 +79,7 @@ export class GoogleWalletService {
               alternateText: ticket.qr_code
             },
             reservationId: ticket.id.substring(0, 8).toUpperCase(),
-            ticketHolderName: ticket.customer_name || 'Participante',
+            ticketHolderName: ticket.customer?.name || ticket.customer_email.split('@')[0] || 'Participante',
             ticketNumber: ticket.id.substring(0, 12).toUpperCase(),
             venueName: {
               defaultValue: {

@@ -1652,10 +1652,12 @@ export const AdminTickets = () => {
         .from('orders')
         .insert([{
           customer_id: customerId,
-          total_amount: 0, // Cortesia é valor zero
+          customer_name: courtesyData.name,
+          customer_email: courtesyData.email,
+          total_amount: 0, 
           status: 'paid',
           item_type: 'ticket',
-          item_id: selectedEvent.id,
+          item_id: selectedBatch.id, // Use the batch id, not event id
           payment_method: 'courtesy'
         }])
         .select()
@@ -1670,12 +1672,12 @@ export const AdminTickets = () => {
         .insert([{
           event_id: selectedEvent.id,
           tier_id: selectedBatch.id,
-          customer_name: courtesyData.name,
-          customer_email: courtesyData.email,
+          order_id: orderData.id,
           status: 'active',
           payment_status: 'paid',
-          order_id: orderData.id, // Referência opcional pro pedido
-          qr_code: `CORTESIA-${Math.random().toString(36).substring(2, 9).toUpperCase()}`
+          qr_code: `CORTESIA-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+          customer_email: courtesyData.email,
+          customer_id: customerId
         }]);
 
       if (ticketError) throw ticketError;

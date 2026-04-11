@@ -105,11 +105,27 @@ export const ExperienceHome = () => {
 
           const tiersMap = new Map((tiers || []).map(t => [t.id, t]));
 
+          // 3. (Optional) Fetch events directly for those that linked to event_id instead of tier_id
+          const eventIds = [
+            ...Array.from(tiersMap.values()).map(t => (t as any).events?.id || (t as any).event_id),
+            ...tickets.filter(t => !tiersMap.has(t.item_id)).map(t => t.item_id)
+          ].filter(Boolean);
+
+          const { data: events } = await supabase
+            .schema('app_carsena')
+            .from('events')
+            .select('*')
+            .in('id', eventIds);
+
+          const eventsMap = new Map((events || []).map(e => [e.id, e]));
+
           formattedTickets = tickets.map((t: any) => {
             const tier = tiersMap.get(t.item_id);
+            const event = tier?.events || eventsMap.get(t.item_id);
+
             return {
               id: t.id,
-              title: tier?.events?.title || "Ticket",
+              title: event?.title || "Ticket",
               type: 'Ingresso',
               typeIcon: <Ticket size={14} />,
               status: t.status === 'paid' ? 'disponível' : 'aguardando',

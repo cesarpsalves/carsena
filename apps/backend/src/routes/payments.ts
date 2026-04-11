@@ -100,7 +100,9 @@ router.post('/checkout', async (req, res) => {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert([{
-        customer_id: null, // Will link properly when customer auth is fully wired
+        customer_id: null,
+        customer_email,
+        customer_name,
         total_amount: final_total,
         status: 'pending',
         payment_method,
