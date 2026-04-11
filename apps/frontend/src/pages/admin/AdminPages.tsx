@@ -1447,6 +1447,8 @@ export const AdminTickets = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [attendance, setAttendance] = useState<any[]>([]);
   const [isCourtesyModalOpen, setIsCourtesyModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
@@ -1471,6 +1473,29 @@ export const AdminTickets = () => {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  const fetchAttendance = async (eventId: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .schema('app_carsena')
+        .from('tickets')
+        .select(`
+          *,
+          customers ( name, email, phone )
+        `)
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAttendance(data || []);
+      setIsAttendanceModalOpen(true);
+    } catch (error: any) {
+      toast.error("Erro ao carregar lista de inscritos: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -1812,6 +1837,15 @@ export const AdminTickets = () => {
                <Settings size={14} className="text-luxury-gold" /> Configurar Lotes
              </button>
              <button 
+               onClick={() => { setSelectedEvent(event); fetchAttendance(event.id); }}
+               className="flex items-center justify-center gap-2 py-4 bg-white/5 hover:bg-white/10 text-[9px] font-black uppercase tracking-[0.2em] transition-all border border-white/10"
+             >
+               <Users size={14} className="text-luxury-gold" /> Ver Inscritos
+             </button>
+          </div>
+
+          <div className="grid grid-cols-1 mt-3">
+             <button 
                onClick={() => navigate('/admin/scanner')}
                className="flex items-center justify-center gap-2 py-4 bg-luxury-gold text-black text-[9px] font-black uppercase tracking-[0.2em] hover:bg-white transition-all shadow-lg"
              >
@@ -2037,6 +2071,50 @@ export const AdminTickets = () => {
         </div>
       </Modal>
 
+      {/* Modal: Ver Inscritos */}
+      <Modal
+        isOpen={isAttendanceModalOpen}
+        onClose={() => setIsAttendanceModalOpen(false)}
+        title={`Inscritos: ${selectedEvent?.title}`}
+      >
+        <div className="space-y-6">
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.3em] text-white/40 pb-4 border-b border-white/5">
+            <span>Total de Participantes</span>
+            <span className="text-luxury-gold font-bold">{attendance.length}</span>
+          </div>
+
+          <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-2 custom-scrollbar text-white">
+            {attendance.length === 0 ? (
+              <p className="text-center py-12 text-[10px] uppercase tracking-widest text-white/20">Nenhum participante confirmado ainda.</p>
+            ) : attendance.map((ticket) => (
+              <div key={ticket.id} className="p-4 bg-white/5 border border-white/5 flex items-center justify-between hover:bg-white/[0.08] transition-all">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold uppercase tracking-widest text-white">{ticket.customers?.name || ticket.ticket_holder_name || 'Desconhecido'}</p>
+                  <p className="text-[10px] text-white/40 font-mono">{ticket.customers?.email || '-'}</p>
+                  <div className="flex gap-2">
+                    <span className={cn(
+                      "text-[8px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full",
+                      ticket.status === 'valid' ? "bg-emerald-500/10 text-emerald-500" : "bg-red-500/10 text-red-500"
+                    )}>
+                      {ticket.status === 'valid' ? 'Ativo' : 'Utilizado'}
+                    </span>
+                    {ticket.is_courtesy && (
+                      <span className="text-[8px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-luxury-gold/10 text-luxury-gold border border-luxury-gold/20">
+                        Cortesia
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] text-white/20 uppercase tracking-widest">{new Date(ticket.created_at).toLocaleDateString('pt-BR')}</p>
+                  <p className="text-[8px] text-white/10 uppercase tracking-widest mt-1">Ref: {ticket.id.slice(0,8)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
     </AdminLayout>
   );
 };
@@ -2239,7 +2317,7 @@ export const AdminFinance = () => {
                   {order.is_gallery ? `Saldo: ${order.gallery_title}` : (order.item_type === 'ticket' ? 'Ingresso Evento' : 'Galeria de Fotos')}
                 </td>
                 <td className="p-6 text-[10px] uppercase tracking-widest text-luxury-cream/40">
-                  {order.is_gallery ? 'Aguardando Cliente' : (order.customers?.name || 'Cliente Geral')}
+                  {order.is_gallery ? 'Aguardando Cliente' : (order.customers?.name || order.customer_name || 'Participante')}
                 </td>
                 <td className="p-6 text-[10px] font-bold tracking-widest text-luxury-gold">
                   {formatCurrency(Number(order.total_amount))}

@@ -11,6 +11,7 @@ import { CloudManager } from "./pages/admin/CloudManager";
 import { AdminScanner } from "./pages/admin/AdminScanner";
 import { AdminGalleries, AdminTickets, AdminFinance, AdminSettings } from "./pages/admin/AdminPages";
 import { ExperienceHome } from './pages/client/ExperienceHome';
+import { ClientLogin } from './pages/client/ClientLogin';
 import { GalleryView } from './pages/client/GalleryView';
 import { GalleryRedirect } from './pages/client/GalleryRedirect';
 import { TicketView } from './pages/client/TicketView';
@@ -62,6 +63,7 @@ function App() {
           />
 
           {/* Client Experience Area */}
+          <Route path="/cliente/login" element={<ClientLogin />} />
           <Route path="/cliente" element={<ExperienceHome />} />
           <Route path="/cliente/galeria/:id" element={<GalleryView />} />
           <Route path="/cliente/checkout/:id" element={<Checkout />} />

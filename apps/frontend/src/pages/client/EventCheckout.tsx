@@ -13,6 +13,8 @@ import {
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/utils";
+import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
 
 // Função de validação de CPF
 const isValidCPF = (cpf: string) => {
@@ -46,6 +48,7 @@ const maskCPF = (value: string) => {
 };
 
 export const EventCheckout = () => {
+  const { loginAsCustomer } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -113,6 +116,21 @@ export const EventCheckout = () => {
         }, 1500);
       } else {
         setPixData(data.payment);
+        
+        // Auto-login customer
+        try {
+          const { data: cust } = await supabase
+            .schema('app_carsena')
+            .from('customers')
+            .select('*')
+            .eq('email', customerEmail.toLowerCase())
+            .single();
+          
+          if (cust) loginAsCustomer(cust);
+        } catch (e) {
+          // Silent fail for auto-login
+        }
+        
         toast.success("Pagamento PIX gerado com sucesso!");
       }
     } catch (err: any) {
