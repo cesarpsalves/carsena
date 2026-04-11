@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { cmsService } from '../lib/cms';
 import { cn } from '../lib/utils';
-import { Tag, CheckCircle2, AlertCircle, Loader2, ShieldCheck, FileText } from 'lucide-react';
+import { CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 
 // Função de validação de CPF
 const isValidCPF = (cpf: string) => {
