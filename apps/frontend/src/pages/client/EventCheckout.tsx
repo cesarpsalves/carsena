@@ -12,6 +12,38 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "../../lib/utils";
+
+// Função de validação de CPF
+const isValidCPF = (cpf: string) => {
+  const cleanCPF = cpf.replace(/\D/g, '');
+  if (cleanCPF.length !== 11) return false;
+  if (/^(\d)\1+$/.test(cleanCPF)) return false;
+
+  let sum = 0;
+  for (let i = 1; i <= 9; i++) sum += parseInt(cleanCPF.substring(i-1, i)) * (11 - i);
+  let rest = (sum * 10) % 11;
+  if (rest === 10 || rest === 11) rest = 0;
+  if (rest !== parseInt(cleanCPF.substring(9, 10))) return false;
+
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum += parseInt(cleanCPF.substring(i-1, i)) * (12 - i);
+  rest = (sum * 10) % 11;
+  if (rest === 10 || rest === 11) rest = 0;
+  if (rest !== parseInt(cleanCPF.substring(10, 11))) return false;
+
+  return true;
+};
+
+// Função de máscara de CPF
+const maskCPF = (value: string) => {
+  return value
+    .replace(/\D/g, '')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+    .substring(0, 14);
+};
 
 export const EventCheckout = () => {
   const location = useLocation();
@@ -23,7 +55,7 @@ export const EventCheckout = () => {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerDocument, setCustomerDocument] = useState("");
-  
+  const [paymentMethod, setPaymentMethod] = useState<'PIX' | 'CREDIT_CARD'>('PIX');
   const [pixData, setPixData] = useState<any>(null);
   const [verifying, setVerifying] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -43,6 +75,12 @@ export const EventCheckout = () => {
       return;
     }
 
+    const cleanDoc = customerDocument.replace(/\D/g, '');
+    if (cleanDoc.length === 11 && !isValidCPF(cleanDoc)) {
+      toast.error("CPF informado é inválido. Por favor, corrija.");
+      return;
+    }
+
     try {
       setVerifying(true);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/payments/checkout`, {
@@ -52,7 +90,7 @@ export const EventCheckout = () => {
           customer_name: customerName,
           customer_email: customerEmail,
           customer_document: customerDocument,
-          payment_method: 'PIX',
+          payment_method: paymentMethod,
           items: [
             {
               item_id: tier.id,
@@ -68,8 +106,15 @@ export const EventCheckout = () => {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      setPixData(data.payment);
-      toast.success("Pagamento PIX gerado com sucesso!");
+      if (paymentMethod === 'CREDIT_CARD') {
+        toast.success("Redirecionando para o pagamento seguro...");
+        setTimeout(() => {
+          window.location.href = data.payment.url;
+        }, 1500);
+      } else {
+        setPixData(data.payment);
+        toast.success("Pagamento PIX gerado com sucesso!");
+      }
     } catch (err: any) {
       toast.error("Erro ao gerar pagamento: " + err.message);
     } finally {
@@ -137,7 +182,33 @@ export const EventCheckout = () => {
           </div>
 
           {/* Pagamento */}
-          <div className="lg:col-span-12 xl:col-span-7">
+          <div className="lg:col-span-12 xl:col-span-7 space-y-8">
+             {/* Payment Method Selector */}
+             {!pixData && (
+               <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => setPaymentMethod('PIX')}
+                    className={`flex flex-col items-center gap-4 p-8 border-2 transition-all ${paymentMethod === 'PIX' ? 'border-luxury-gold bg-luxury-gold/5' : 'border-luxury-black/5 bg-white'}`}
+                  >
+                     <img src="https://logopng.com.br/logos/pix-106.png" className={`h-8 ${paymentMethod === 'PIX' ? '' : 'grayscale opacity-40'}`} alt="PIX" />
+                     <div className="text-center">
+                        <p className="text-[10px] font-black uppercase tracking-widest">Pagar com PIX</p>
+                        <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest mt-1">Preço Original</p>
+                     </div>
+                  </button>
+                  <button 
+                    onClick={() => setPaymentMethod('CREDIT_CARD')}
+                    className={`flex flex-col items-center gap-4 p-8 border-2 transition-all ${paymentMethod === 'CREDIT_CARD' ? 'border-luxury-gold bg-luxury-gold/5' : 'border-luxury-black/5 bg-white'}`}
+                  >
+                     <CreditCard className={`w-8 h-8 ${paymentMethod === 'CREDIT_CARD' ? 'text-luxury-gold' : 'text-luxury-black/20'}`} />
+                     <div className="text-center">
+                        <p className="text-[10px] font-black uppercase tracking-widest">Cartão de Crédito</p>
+                        <p className="text-[9px] text-luxury-black/40 uppercase tracking-widest mt-1">Até 12x no cartão</p>
+                     </div>
+                  </button>
+               </div>
+             )}
+
              <AnimatePresence mode="wait">
                {!pixData ? (
                  <motion.div 
@@ -185,16 +256,27 @@ export const EventCheckout = () => {
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-luxury-black/60 pl-2">CPF ou CNPJ</label>
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-luxury-black/60 pl-2 flex justify-between">
+                            <span>CPF ou CNPJ</span>
+                            {customerDocument.replace(/\D/g, '').length === 11 && (
+                              isValidCPF(customerDocument) 
+                                ? <span className="text-emerald-500 lowercase font-medium">CPF Válido</span>
+                                : <span className="text-rose-500 lowercase font-medium">CPF Inválido</span>
+                            )}
+                          </label>
                           <div className="relative mt-2">
                             <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-luxury-black/20" size={20} />
                             <input 
                               required
                               type="text" 
                               value={customerDocument}
-                              onChange={e => setCustomerDocument(e.target.value.replace(/\D/g, ''))}
-                              maxLength={14}
-                              className="w-full bg-luxury-cream/30 border border-luxury-black/10 py-4 pl-12 pr-4 outline-none focus:border-luxury-gold transition-colors text-luxury-black"
+                              onChange={e => setCustomerDocument(maskCPF(e.target.value))}
+                              className={cn(
+                                "w-full bg-luxury-cream/30 border py-4 pl-12 pr-4 outline-none transition-colors text-luxury-black",
+                                customerDocument.replace(/\D/g, '').length === 11 && !isValidCPF(customerDocument)
+                                  ? "border-rose-200 bg-rose-50/20"
+                                  : "border-luxury-black/10 focus:border-luxury-gold"
+                              )}
                               placeholder="000.000.000-00"
                             />
                           </div>
@@ -206,7 +288,11 @@ export const EventCheckout = () => {
                         disabled={verifying}
                         className="w-full py-6 mt-4 bg-luxury-black text-white text-[11px] font-black uppercase tracking-[0.5em] hover:bg-luxury-gold hover:text-black hover:scale-[1.02] transition-all disabled:opacity-50"
                       >
-                        {verifying ? "Gerando Protocolo PIX..." : "Gerar PIX de Pagamento"}
+                        {verifying 
+                          ? "Processando..." 
+                          : paymentMethod === 'PIX' 
+                            ? "Gerar PIX de Pagamento" 
+                            : "Pagar com Cartão (R$ " + (tier.price * 1.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ")"}
                       </button>
                     </form>
 

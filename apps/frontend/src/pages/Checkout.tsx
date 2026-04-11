@@ -89,6 +89,9 @@ function Checkout() {
   
   const total = Math.max(0, subtotal - discountAmount);
 
+  // Adjusted total based on payment method (5% markup for Credit Card)
+  const finalTotal = paymentMethod === 'CREDIT_CARD' ? Number((total * 1.05).toFixed(2)) : total;
+
   useEffect(() => {
     if (effectiveItems.length === 0) {
       navigate('/');
@@ -131,12 +134,6 @@ function Checkout() {
       // Para o Asaas, o ideal é que a soma dos itens bata com o 'value' enviado.
       const discountFactor = total / subtotal;
 
-      const response = await api.post('/payments/checkout', {
-        customer_name: customer.name,
-        customer_email: customer.email,
-        customer_document: cleanDocument,
-        payment_method: paymentMethod,
-        coupon_code: appliedCoupon?.code, // Passagem opcional para log/backend
         items: effectiveItems.map(item => ({
           item_type: item.item_type,
           item_id: item.item_id,
@@ -145,15 +142,23 @@ function Checkout() {
         }))
       });
 
-      // Redireciona para sucesso com dados do Asaas
+      const { payment } = response.data;
+
+      if (paymentMethod === 'CREDIT_CARD') {
+        // Redireciona para o checkout do Asaas
+        window.location.href = payment.url;
+        return;
+      }
+
+      // Redireciona para sucesso com dados do Asaas (PIX)
       navigate('/success', { 
         state: { 
           orderId: response.data.orderId, 
-          pixData: response.data.payment.pix_qrcode ? {
-            encodedImage: response.data.payment.pix_qrcode,
-            payload: response.data.payment.id // Simplificando por enquanto
+          pixData: payment.pix_qrcode ? {
+            encodedImage: payment.pix_qrcode,
+            payload: payment.pix_qrcode_text
           } : null,
-          paymentUrl: response.data.payment.url
+          paymentUrl: payment.url
         } 
       });
     } catch (error: any) {
@@ -255,7 +260,7 @@ function Checkout() {
                 disabled={loading}
                 className="w-full py-6 bg-luxury-black text-white text-[11px] font-bold uppercase tracking-[0.3em] hover:bg-luxury-gold hover:text-black transition-all shadow-xl disabled:opacity-50"
               >
-                {loading ? 'Processando Solicitação...' : `Finalizar e Pagar R$ ${total.toFixed(2)}`}
+                {loading ? 'Processando Solicitação...' : `Finalizar e Pagar R$ ${finalTotal.toFixed(2)}`}
               </button>
             </form>
           </section>
@@ -336,9 +341,15 @@ function Checkout() {
                     <span>- R$ {discountAmount.toFixed(2)}</span>
                   </div>
                 )}
+                </div>
                 <div className="flex justify-between py-4 border-y border-black/5 items-baseline">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-luxury-black">Total Final</span>
-                  <span className="font-serif text-3xl text-luxury-gold">R$ {total.toFixed(2)}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-luxury-black">Total Final</span>
+                    {paymentMethod === 'CREDIT_CARD' && (
+                      <span className="text-[8px] text-gray-400 uppercase tracking-widest mt-1">+ 5% taxa de processamento cartão</span>
+                    )}
+                  </div>
+                  <span className="font-serif text-3xl text-luxury-gold">R$ {finalTotal.toFixed(2)}</span>
                 </div>
               </div>
             </section>

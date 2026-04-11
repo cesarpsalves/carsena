@@ -30,6 +30,14 @@ router.post('/checkout', async (req, res) => {
 
     if (existingCustomerMap) {
       asaasCustomerId = existingCustomerMap.asaas_customer_id;
+      
+      // ALWAYS update customer in Asaas to ensure CPF is present (fixes PDF generation error)
+      await AsaasService.updateCustomer(asaasCustomerId, {
+        name: customer_name,
+        email: customer_email,
+        cpfCnpj: customer_document
+      }).catch(err => console.error('⚠️ Falha ao atualizar cliente no Asaas:', err.message));
+
     } else {
       // Create in Asaas
       const newAsaasCustomer = await AsaasService.createCustomer({
@@ -80,14 +88,20 @@ router.post('/checkout', async (req, res) => {
       total_amount = finalItems.reduce((acc: number, item: any) => acc + (item.unit_price * item.quantity), 0);
     }
 
-    if (total_amount <= 0) throw new Error('Valor inválido para pagamento');
+    // 4. Apply Payment Fees (5% markup for Credit Card)
+    let final_total = total_amount;
+    if (payment_method === 'CREDIT_CARD') {
+      final_total = Number((total_amount * 1.05).toFixed(2));
+    }
 
-    // 4. Create Order
+    if (final_total <= 0) throw new Error('Valor inválido para pagamento');
+
+    // 5. Create Order
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert([{
         customer_id: null, // Will link properly when customer auth is fully wired
-        total_amount,
+        total_amount: final_total,
         status: 'pending',
         payment_method,
         item_type: finalItems[0]?.item_type || 'gallery',
@@ -156,7 +170,9 @@ router.post('/checkout', async (req, res) => {
         url: asaasPayment.invoiceUrl,
         pix_qrcode: updateData.pix_qrcode,
         pix_qrcode_text: updateData.pix_qrcode_text,
-        total: total_amount
+        total: final_total,
+        original_total: total_amount,
+        method: payment_method
       }
     });
 

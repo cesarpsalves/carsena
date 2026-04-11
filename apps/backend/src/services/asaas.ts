@@ -74,4 +74,14 @@ export const AsaasService = {
       throw error;
     }
   },
+
+  updateCustomer: async (id: string, customer: AsaasCustomer) => {
+    try {
+      const { data } = await asaasClient.post(`/customers/${id}`, customer);
+      return data;
+    } catch (error: any) {
+      console.error('Error updating Asaas customer:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.errors?.[0]?.description || 'Erro ao atualizar cliente no Asaas');
+    }
+  },
 };
