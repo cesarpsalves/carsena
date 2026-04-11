@@ -98,21 +98,46 @@ export const TicketView = () => {
             <TicketCard ticket={ticketData} />
 
             {/* Additional Actions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-4">
               <button 
-                onClick={() => toast.info("Integração Apple Wallet em breve!")}
-                className="flex items-center justify-center gap-3 bg-white text-black font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-luxury-gold"
+                onClick={async () => {
+                  try {
+                    const url = await ticketService.getGoogleWalletUrl(ticketData.id);
+                    if (url.startsWith('#')) {
+                      toast.error("Google Wallet não configurado no servidor.");
+                    } else {
+                      window.location.href = url;
+                    }
+                  } catch (err) {
+                    toast.error("Erro ao gerar link do Google Wallet.");
+                  }
+                }}
+                className="flex items-center justify-center gap-3 bg-black text-white font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-white/10 border border-white/20 rounded-xl"
               >
-                <Smartphone size={16} />
-                Apple Wallet
+                <img 
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Wallet_Icon_2022.svg/512px-Google_Wallet_Icon_2022.svg.png" 
+                  alt="Google Wallet" 
+                  className="w-5 h-5"
+                />
+                Adicionar ao Google Wallet
               </button>
-              <button 
-                onClick={handleShare}
-                className="flex items-center justify-center gap-3 border border-white/20 text-white font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-white/10"
-              >
-                <Share2 size={16} />
-                Compartilhar
-              </button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button 
+                  onClick={() => toast.info("Integração Apple Wallet em breve!")}
+                  className="flex items-center justify-center gap-3 bg-white text-black font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-luxury-gold"
+                >
+                  <Smartphone size={16} />
+                  Apple Wallet
+                </button>
+                <button 
+                  onClick={handleShare}
+                  className="flex items-center justify-center gap-3 border border-white/20 text-white font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-white/10"
+                >
+                  <Share2 size={16} />
+                  Compartilhar
+                </button>
+              </div>
             </div>
 
             <div className="text-center">

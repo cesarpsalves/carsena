@@ -40,22 +40,24 @@ export class GoogleWalletService {
       .select(`
         *,
         event:events(*),
-        tier:event_tiers(*)
+        tier:ticket_tiers(*)
       `)
       .eq('id', ticketId)
       .single();
 
     if (error || !ticket) {
-      throw new Error('Ticket not found');
+      throw new Error(`Ticket não encontrado: ${error?.message || ''}`);
     }
 
-    // If config is missing, return a "pre-configured" or mockup link
-    // or throw error depending on how we want to handle it.
-    // For now, let's return a special URL if not configured.
     if (!config) {
       console.warn('Google Wallet credentials not found in .env');
       return `\#google-wallet-not-configured-${ticketId}`;
     }
+
+    // Clean up class ID if it contains the full email/client id
+    const cleanClassId = config.classId.includes('@') || config.classId.includes('.com')
+      ? 'ingresso_carsena_v1' // Fallback to a generic name
+      : config.classId;
 
     const now = Math.floor(Date.now() / 1000);
     
@@ -68,21 +70,24 @@ export class GoogleWalletService {
         eventTicketObjects: [
           {
             id: `${config.issuerId}.${ticket.id}`,
-            classId: `${config.issuerId}.${config.classId}`,
+            classId: `${config.issuerId}.${cleanClassId}`,
             state: 'ACTIVE',
             barcode: {
               type: 'QR_CODE',
               value: ticket.qr_code,
-              alternateText: ticket.id.substring(0, 8).toUpperCase()
+              alternateText: ticket.qr_code
             },
             reservationId: ticket.id.substring(0, 8).toUpperCase(),
             ticketHolderName: ticket.customer_name || 'Participante',
-            ticketNumber: ticket.id.substring(0, 12),
+            ticketNumber: ticket.id.substring(0, 12).toUpperCase(),
             venueName: {
               defaultValue: {
                 language: 'pt-BR',
                 value: ticket.event.location || 'Local do Evento'
               }
+            },
+            dateTime: {
+              start: ticket.event.date ? new Date(ticket.event.date).toISOString() : new Date().toISOString()
             }
           }
         ]
