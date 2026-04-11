@@ -60,6 +60,10 @@ export const Checkout = () => {
 
   const handleCheckout = async () => {
     if (!customer || !gallery) return;
+    if (!cpf || !isValidCPF(cpf)) {
+      toast.error("Por favor, informe um CPF válido.");
+      return;
+    }
 
     try {
       setVerifying(true);
@@ -70,12 +74,18 @@ export const Checkout = () => {
           gallery_id: id,
           customer_name: customer.name,
           customer_email: customer.email,
-          payment_method: 'PIX'
+          customer_document: cpf,
+          payment_method: paymentMethod
         })
       });
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
+
+      if (paymentMethod === 'CREDIT_CARD') {
+        window.location.href = data.payment.url || data.payment.invoiceUrl;
+        return;
+      }
 
       setPixData(data.payment);
       toast.success("Pagamento PIX gerado com sucesso!");
@@ -101,7 +111,9 @@ export const Checkout = () => {
     );
   }
 
-  const balanceToPay = Number(gallery?.price || 0) - Number(gallery?.amount_paid || 0);
+  const baseBalance = Number(gallery?.price || 0) - Number(gallery?.amount_paid || 0);
+  const fee = paymentMethod === 'CREDIT_CARD' ? baseBalance * 0.05 : 0;
+  const balanceToPay = baseBalance + fee;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -115,7 +127,7 @@ export const Checkout = () => {
              <ArrowLeft size={16} /> Voltar
            </Link>
            <h1 className="text-xs font-bold tracking-[0.5em] text-white/40 uppercase">Liberação de Experiência</h1>
-           <div className="w-10" /> {/* Empty div for balance */}
+           <div className="w-10" />
         </div>
       </header>
 
@@ -139,10 +151,24 @@ export const Checkout = () => {
                    <p className="text-[10px] text-emerald-500/60 uppercase tracking-widest font-bold">Saldo Já Pago</p>
                    <p className="text-xl text-emerald-500 font-light">- R$ {Number(gallery.amount_paid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                 </div>
+
+                {fee > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex justify-between items-end text-[#d4af37]/60"
+                  >
+                     <p className="text-[10px] uppercase tracking-widest font-bold">Taxa de Cartão (5%)</p>
+                     <p className="text-xl font-light">+ R$ {fee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </motion.div>
+                )}
+
                 <div className="flex justify-between items-end pt-4">
                    <div className="space-y-1">
                       <p className="text-[10px] text-[#d4af37] uppercase tracking-[0.3em] font-black">Restante à Pagar</p>
-                      <p className="text-[9px] text-white/20 uppercase tracking-widest">Liberação Instantânea</p>
+                      <p className="text-[9px] text-white/20 uppercase tracking-widest">
+                        {paymentMethod === 'PIX' ? "Liberação Instantânea" : "Processamento Seguro"}
+                      </p>
                    </div>
                    <p className="text-4xl font-serif text-[#d4af37]">R$ {balanceToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                 </div>
@@ -166,26 +192,74 @@ export const Checkout = () => {
                    initial={{ opacity: 0, scale: 0.95 }}
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 1.05 }}
-                   className="bg-white/5 border border-[#d4af37]/20 p-12 lg:p-20 rounded-[3rem] text-center space-y-10"
+                   className="bg-white/5 border border-[#d4af37]/20 p-12 lg:p-16 rounded-[3.5rem] space-y-12"
                  >
-                    <div className="w-20 h-20 bg-[#d4af37]/10 rounded-full flex items-center justify-center mx-auto text-[#d4af37]">
-                       <CreditCard size={40} />
-                    </div>
-                    <div className="space-y-4">
-                       <h3 className="text-3xl font-light">Método de Pagamento</h3>
-                       <p className="text-white/40 text-sm max-w-sm mx-auto">Utilizamos o checkout seguro Asaas para garantir a entrega rápida de suas memórias.</p>
+                    <div className="space-y-8">
+                       <div className="space-y-4">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37] pl-2 flex justify-between">
+                            <span>CPF do Comprador</span>
+                            {cpf.replace(/\D/g, '').length === 11 && (
+                              isValidCPF(cpf) 
+                                ? <span className="text-emerald-500 lowercase font-medium flex items-center gap-1"><ShieldCheck size={10} /> Válido</span>
+                                : <span className="text-rose-500 lowercase font-medium flex items-center gap-1"><AlertCircle size={10} /> Inválido</span>
+                            )}
+                          </label>
+                          <input 
+                            required
+                            type="text" 
+                            value={cpf}
+                            onChange={e => setCpf(maskCPF(e.target.value))}
+                            className="w-full bg-white/[0.03] border border-white/10 py-5 px-6 rounded-2xl outline-none focus:border-[#d4af37] transition-all text-xl text-center tracking-widest"
+                            placeholder="000.000.000-00"
+                          />
+                       </div>
+
+                       <div className="space-y-4">
+                         <label className="text-[10px] font-bold uppercase tracking-widest text-white/40 pl-2">Selecione o Método</label>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <button 
+                              type="button"
+                              onClick={() => setPaymentMethod('PIX')}
+                              className={cn(
+                                "flex flex-col items-center gap-4 p-8 border-2 transition-all rounded-[2rem]",
+                                paymentMethod === 'PIX' ? "border-[#d4af37] bg-[#d4af37]/5" : "border-white/5 bg-white/[0.02] opacity-40 hover:opacity-100"
+                              )}
+                            >
+                              <div className={cn("w-12 h-12 flex items-center justify-center rounded-full border", paymentMethod === 'PIX' ? "border-[#d4af37] text-[#d4af37]" : "border-white/10")}>
+                                {paymentMethod === 'PIX' ? <CheckCircle2 size={24} /> : <div className="w-4 h-4 rounded-full bg-white/10" />}
+                              </div>
+                              <span className="text-xs font-bold uppercase tracking-widest">Pix Instantâneo</span>
+                            </button>
+
+                            <button 
+                              type="button"
+                              onClick={() => setPaymentMethod('CREDIT_CARD')}
+                              className={cn(
+                                "flex flex-col items-center gap-4 p-8 border-2 transition-all rounded-[2rem]",
+                                paymentMethod === 'CREDIT_CARD' ? "border-[#d4af37] bg-[#d4af37]/5" : "border-white/5 bg-white/[0.02] opacity-40 hover:opacity-100"
+                              )}
+                            >
+                              <div className={cn("w-12 h-12 flex items-center justify-center rounded-full border", paymentMethod === 'CREDIT_CARD' ? "border-[#d4af37] text-[#d4af37]" : "border-white/10")}>
+                                {paymentMethod === 'CREDIT_CARD' ? <CheckCircle2 size={24} /> : <div className="w-4 h-4 rounded-full bg-white/10" />}
+                              </div>
+                              <span className="text-xs font-bold uppercase tracking-widest">Cartão de Crédito</span>
+                            </button>
+                         </div>
+                       </div>
                     </div>
 
                     <button 
                       onClick={handleCheckout}
                       disabled={verifying}
-                      className="w-full py-6 bg-[#d4af37] text-black text-[11px] font-black uppercase tracking-[0.5em] rounded-2xl hover:bg-white hover:scale-[1.02] transition-all shadow-2xl shadow-[#d4af37]/20 disabled:opacity-50"
+                      className="w-full py-7 bg-[#d4af37] text-black text-[12px] font-black uppercase tracking-[0.6em] rounded-3xl hover:bg-white hover:shadow-[0_0_50px_rgba(212,175,55,0.3)] transition-all disabled:opacity-50"
                     >
-                      {verifying ? "Gerando Protocolo PIX..." : "Gerar PIX de Liberação"}
+                      {verifying ? "Iniciando Protocolo..." : paymentMethod === 'PIX' ? "Gerar PIX de Liberação" : "Pagar com Cartão"}
                     </button>
 
-                    <div className="flex items-center justify-center gap-4 pt-10 border-t border-white/5">
-                       <img src="https://logopng.com.br/logos/pix-106.png" className="h-6 grayscale opacity-20" alt="PIX" />
+                    <div className="flex items-center justify-center gap-6 opacity-20">
+                       <img src="https://logopng.com.br/logos/pix-106.png" className="h-5" alt="PIX" />
+                       <div className="w-px h-4 bg-white" />
+                       <CreditCard size={20} />
                     </div>
                  </motion.div>
                ) : (

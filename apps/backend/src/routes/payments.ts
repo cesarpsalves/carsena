@@ -127,7 +127,7 @@ router.post('/checkout', async (req, res) => {
     const asaasPayment = await AsaasService.createPayment({
       customer: asaasCustomerId,
       billingType: payment_method as any,
-      value: total_amount,
+      value: final_total,
       dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       description: `Pedido ${order.id} - Carsena`,
       externalReference: order.id
