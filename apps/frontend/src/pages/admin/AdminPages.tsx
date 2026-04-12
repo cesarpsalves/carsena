@@ -379,6 +379,17 @@ export const AdminGalleries = () => {
 
   const handleCreateGallery = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!newGallery.customer_id) {
+      toast.error("Por favor, selecione um cliente primeiro.");
+      return;
+    }
+
+    if (!newGallery.title) {
+      toast.error("Por favor, dê um título para a sessão.");
+      return;
+    }
+
     try {
       const { error } = await supabase
         .schema('app_carsena')
@@ -777,21 +788,6 @@ export const AdminGalleries = () => {
       <PageHeader 
         title="Meu Estúdio" 
         subtitle="Gestão de clientes, sessões e entregas de fotos" 
-        action={activeTab === 'sessions' ? "Nova Sessão" : activeTab === 'customers' ? "Novo Cliente" : activeTab === 'admins' ? "Novo Admin" : "Novo Tipo"} 
-        onAction={() => {
-           if (activeTab === 'sessions') {
-              setIsModalOpen(true);
-           } else if (activeTab === 'customers') {
-              setNewClient({ name: '', email: '', phone: '', cpf: '' });
-              setIsCustomerModalOpen(true);
-           } else if (activeTab === 'admins') {
-              setNewAdmin({ name: '', email: '', user_type: 'photographer' });
-              setIsAdminModalOpen(true);
-           } else {
-              setNewServiceType({ name: '', category: 'Ensaios (Portraits)' });
-              setIsServiceModalOpen(true);
-           }
-        }}
       />
       
       <div className="space-y-8">
@@ -840,15 +836,32 @@ export const AdminGalleries = () => {
             </button>
           </div>
 
-          <div className="flex-1 max-w-md w-full relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
-            <input 
-              type="text" 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Pesquisar..." 
-              className="w-full bg-white/5 border border-white/5 px-12 py-4 text-xs text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
-            />
+          <div className="flex-1 max-w-xl w-full flex items-center gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+              <input 
+                type="text" 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Pesquisar..." 
+                className="w-full bg-white/5 border border-white/5 px-12 py-4 text-xs text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
+              />
+            </div>
+            
+            <button 
+              onClick={() => {
+                if (activeTab === 'sessions') setIsModalOpen(true);
+                else if (activeTab === 'customers') { setNewClient({ name: '', email: '', phone: '', cpf: '' }); setIsCustomerModalOpen(true); }
+                else if (activeTab === 'admins') { setNewAdmin({ name: '', email: '', user_type: 'photographer' }); setIsAdminModalOpen(true); }
+                else if (activeTab === 'services') setIsServiceModalOpen(true);
+              }}
+              className="bg-luxury-gold text-luxury-black px-8 py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-all shadow-xl flex items-center gap-2 whitespace-nowrap"
+            >
+              <Plus size={16} />
+              {activeTab === 'sessions' ? "Nova Sessão" : 
+               activeTab === 'customers' ? "Novo Cliente" : 
+               activeTab === 'admins' ? "Novo Membro" : "Novo Serviço"}
+            </button>
           </div>
         </div>
 
