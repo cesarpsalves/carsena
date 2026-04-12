@@ -8,6 +8,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { sendAccessCodeEmail } from "@/lib/resend";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 type AuthMode = "client" | "admin";
 type ClientAccessMode = "email" | "code";
@@ -235,123 +236,141 @@ export const Login: FC = () => {
           </button>
         </div>
 
-        {mode === "client" ? (
-          view === "login" ? (
-            <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center justify-center gap-6 mb-8 border-b border-white/5 pb-6">
-                <button
-                  type="button"
-                  onClick={() => setClientAccessMode("email")}
-                  className={cn(
-                    "text-[9px] uppercase tracking-widest font-bold transition-all flex items-center gap-2",
-                    clientAccessMode === "email" ? "text-luxury-gold" : "text-white/30 hover:text-white"
+        <AnimatePresence mode="wait">
+          {mode === "client" ? (
+            <motion.div
+              key="client-auth"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              transition={{ duration: 0.3 }}
+            >
+              {view === "login" ? (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="flex items-center justify-center gap-6 mb-8 border-b border-white/5 pb-6">
+                    <button
+                      type="button"
+                      onClick={() => setClientAccessMode("email")}
+                      className={cn(
+                        "text-[9px] uppercase tracking-widest font-bold transition-all flex items-center gap-2",
+                        clientAccessMode === "email" ? "text-luxury-gold" : "text-white/30 hover:text-white"
+                      )}
+                    >
+                      <MailIcon size={12} />
+                      Entrar com E-mail
+                    </button>
+                    <div className="w-1 h-1 bg-white/10 rounded-full" />
+                    <button
+                      type="button"
+                      onClick={() => setClientAccessMode("code")}
+                      className={cn(
+                        "text-[9px] uppercase tracking-widest font-bold transition-all flex items-center gap-2",
+                        clientAccessMode === "code" ? "text-luxury-gold" : "text-white/30 hover:text-white"
+                      )}
+                    >
+                      <Key size={12} />
+                      Possuo um Código
+                    </button>
+                  </div>
+
+                  {clientAccessMode === "email" ? (
+                    <AuthInput label="E-mail" type="email" name="client-email" placeholder="seu@email.com" id="client-email" required />
+                  ) : (
+                    <AuthInput label="Código de acesso" type="text" name="access-code" placeholder="Ex: JULIA2026" id="access-code" required 
+                      className="text-center tracking-[0.2em] font-bold uppercase placeholder:tracking-normal placeholder:font-normal placeholder:text-[10px]" />
                   )}
-                >
-                  <MailIcon size={12} />
-                  Entrar com E-mail
-                </button>
-                <div className="w-1 h-1 bg-white/10 rounded-full" />
-                <button
-                  type="button"
-                  onClick={() => setClientAccessMode("code")}
-                  className={cn(
-                    "text-[9px] uppercase tracking-widest font-bold transition-all flex items-center gap-2",
-                    clientAccessMode === "code" ? "text-luxury-gold" : "text-white/30 hover:text-white"
-                  )}
-                >
-                  <Key size={12} />
-                  Possuo um Código
-                </button>
-              </div>
 
-              {clientAccessMode === "email" ? (
-                <AuthInput label="E-mail" type="email" name="client-email" placeholder="seu@email.com" id="client-email" required />
-              ) : (
-                <AuthInput label="Código de acesso" type="text" name="access-code" placeholder="Ex: JULIA2026" id="access-code" required 
-                  className="text-center tracking-[0.2em] font-bold uppercase placeholder:tracking-normal placeholder:font-normal placeholder:text-[10px]" />
-              )}
-
-              <button type="submit" disabled={loading}
-                className={cn(
-                  "w-full bg-luxury-gold text-luxury-black py-6 text-[11px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
-                  loading && "opacity-80 pointer-events-none"
-                )}
-              >
-                {loading ? <RefreshCw className="animate-spin" size={14} /> : <>Acessar meu Portal <ArrowRight size={14} /></>}
-              </button>
-
-              {clientAccessMode === "code" && (
-                <div className="text-center pt-4">
-                  <button type="button" onClick={() => setView("request-code")}
-                    className="text-[10px] text-white/30 hover:text-luxury-gold transition-colors font-medium uppercase tracking-[0.1em] underline underline-offset-4"
+                  <button type="submit" disabled={loading}
+                    className={cn(
+                      "w-full bg-luxury-gold text-luxury-black py-6 text-[11px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
+                      loading && "opacity-80 pointer-events-none"
+                    )}
                   >
-                    Esqueci ou não tenho um código
+                    {loading ? <RefreshCw className="animate-spin" size={14} /> : <>Acessar meu Portal <ArrowRight size={14} /></>}
                   </button>
+
+                  {clientAccessMode === "code" && (
+                    <div className="text-center pt-4">
+                      <button type="button" onClick={() => setView("request-code")}
+                        className="text-[10px] text-white/30 hover:text-luxury-gold transition-colors font-medium uppercase tracking-[0.1em] underline underline-offset-4"
+                      >
+                        Esqueci ou não tenho um código
+                      </button>
+                    </div>
+                  )}
+                </form>
+              ) : (
+                <div className="space-y-6">
+                  <AuthInput label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" id="request-email" required />
+                  <div className="flex flex-col gap-4">
+                    <button type="button" onClick={handleRequestCode} disabled={loading || !email}
+                      className={cn(
+                        "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
+                        (loading || !email) && "opacity-80 pointer-events-none"
+                      )}
+                    >
+                      {loading ? "Enviando..." : "Enviar Código"}
+                    </button>
+                    <button type="button" onClick={() => setView("login")}
+                      className="text-[10px] text-white/40 hover:text-white transition-colors font-medium tracking-wide uppercase"
+                    >
+                      Voltar para o Login
+                    </button>
+                  </div>
                 </div>
               )}
-            </form>
+            </motion.div>
           ) : (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <AuthInput label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" id="request-email" required />
-              <div className="flex flex-col gap-4">
-                <button type="button" onClick={handleRequestCode} disabled={loading || !email}
-                  className={cn(
-                    "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
-                    (loading || !email) && "opacity-80 pointer-events-none"
-                  )}
-                >
-                  {loading ? "Enviando..." : "Enviar Código"}
-                </button>
-                <button type="button" onClick={() => setView("login")}
-                  className="text-[10px] text-white/40 hover:text-white transition-colors font-medium tracking-wide uppercase"
-                >
-                  Voltar para o Login
-                </button>
-              </div>
-            </div>
-          )
-        ) : (
-          view === "login" ? (
-            <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <AuthInput label="E-mail" type="email" name="email" placeholder="seu@contato.com" id="email" required autoComplete="email" />
-              <AuthInput label="Senha" type="password" name="password" placeholder="••••••••" id="password" required autoComplete="current-password" />
-              <button type="submit" disabled={loading}
-                className={cn(
-                  "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
-                  loading && "opacity-80 pointer-events-none"
-                )}
-              >
-                {loading ? <RefreshCw className="animate-spin" size={14} /> : "Entrar no Painel"}
-              </button>
-              <div className="text-center pt-2">
-                <button type="button" onClick={() => setView('signup')}
-                  className="text-[10px] text-luxury-gold/60 hover:text-luxury-gold transition-colors font-bold uppercase tracking-widest"
-                >
-                  Novo por aqui? Criar meu Estúdio
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={handleSignUp} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <AuthInput label="Nome do Gestor / Empresa" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Carsena Fotografia" id="signup-name" required />
-              <AuthInput label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@contato.com" id="signup-email" required />
-              <AuthInput label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" id="signup-password" required />
-              <button type="submit" disabled={loading}
-                className={cn(
-                  "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
-                  loading && "opacity-80 pointer-events-none"
-                )}
-              >
-                {loading ? <RefreshCw className="animate-spin" size={14} /> : "Criar meu Estúdio Profissional"}
-              </button>
-              <div className="text-center">
-                <button type="button" onClick={() => setView('login')} className="text-[10px] text-white/30 hover:text-white transition-colors uppercase tracking-widest">
-                  Voltar para o Login
-                </button>
-              </div>
-            </form>
-          )
-        )}
+            <motion.div
+              key="admin-auth"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              {view === "login" ? (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <AuthInput label="E-mail" type="email" name="email" placeholder="seu@contato.com" id="email" required autoComplete="email" />
+                  <AuthInput label="Senha" type="password" name="password" placeholder="••••••••" id="password" required autoComplete="current-password" />
+                  <button type="submit" disabled={loading}
+                    className={cn(
+                      "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
+                      loading && "opacity-80 pointer-events-none"
+                    )}
+                  >
+                    {loading ? <RefreshCw className="animate-spin" size={14} /> : "Entrar no Painel"}
+                  </button>
+                  <div className="text-center pt-2">
+                    <button type="button" onClick={() => setView('signup')}
+                      className="text-[10px] text-luxury-gold/60 hover:text-luxury-gold transition-colors font-bold uppercase tracking-widest"
+                    >
+                      Novo por aqui? Criar meu Estúdio
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleSignUp} className="space-y-6">
+                  <AuthInput label="Nome do Gestor / Empresa" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Carsena Fotografia" id="signup-name" required />
+                  <AuthInput label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@contato.com" id="signup-email" required />
+                  <AuthInput label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" id="signup-password" required />
+                  <button type="submit" disabled={loading}
+                    className={cn(
+                      "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
+                      loading && "opacity-80 pointer-events-none"
+                    )}
+                  >
+                    {loading ? <RefreshCw className="animate-spin" size={14} /> : "Criar meu Estúdio Profissional"}
+                  </button>
+                  <div className="text-center">
+                    <button type="button" onClick={() => setView('login')} className="text-[10px] text-white/30 hover:text-white transition-colors uppercase tracking-widest">
+                      Voltar para o Login
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="pt-4 border-t border-white/5 text-center">
           <p className="text-[11px] text-white/30 font-light tracking-wide leading-relaxed">
