@@ -319,9 +319,6 @@ export const AdminGalleries = () => {
     }
   };
 
-    }
-  };
-
   const handleSaveServiceType = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
