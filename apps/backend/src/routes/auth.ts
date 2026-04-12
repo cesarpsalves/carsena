@@ -42,7 +42,7 @@ router.post('/forgot-password', async (req, res) => {
 
     // 2. Send our Premium Email
     await emailService.sendPasswordResetEmail(email, {
-      customerName: targetUser.user_metadata?.name || 'Cliente Carsena',
+      customerName: targetUser.user_metadata?.full_name || targetUser.user_metadata?.name || 'Cliente Carsena',
       resetLink: data.properties.action_link
     });
 
