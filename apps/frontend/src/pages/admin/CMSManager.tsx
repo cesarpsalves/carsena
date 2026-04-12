@@ -225,7 +225,10 @@ export const CMSManager = () => {
             <p className="text-luxury-cream/40 font-sans text-[10px] tracking-widest uppercase">Personalize a identidade do seu site oficial</p>
           </div>
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 px-6 py-3 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 transition-colors">
+            <button 
+              onClick={() => window.open('/', '_blank')}
+              className="flex items-center gap-2 px-6 py-3 border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 transition-colors"
+            >
               <Eye size={16} />
               Ver Site
             </button>

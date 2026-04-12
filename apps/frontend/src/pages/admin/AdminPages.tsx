@@ -38,7 +38,7 @@ import { UploadZone } from '../../components/admin/UploadZone';
 import { AdminGalleryMedia } from '../../components/admin/AdminGalleryMedia';
 import { useAuth } from "../../contexts/AuthContext";
 
-import { formatCurrency } from "@/utils/format";
+import { formatCurrency, formatCPF, validateCPF } from "@/utils/format";
 import { deleteRawFiles } from "@/lib/api";
 
 
@@ -137,10 +137,11 @@ const FormInput: FC<FormInputProps> = ({
 // --- Pages ---
 
 export const AdminGalleries = () => {
-  const [activeTab, setActiveTab ] = useState<'sessions' | 'customers' | 'admins'>('sessions');
+  const [activeTab, setActiveTab ] = useState<'sessions' | 'customers' | 'admins' | 'services'>('sessions');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -159,12 +160,19 @@ export const AdminGalleries = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [serviceTypes, setServiceTypes] = useState<any[]>([]);
   
   // Form State - Admin
   const [newAdmin, setNewAdmin] = useState({
     name: '',
     email: '',
     user_type: 'photographer'
+  });
+
+  // Form State - Service Type
+  const [newServiceType, setNewServiceType] = useState({
+    name: '',
+    category: 'Ensaios (Portraits)'
   });
 
   // Form State - Gallery
@@ -187,7 +195,8 @@ export const AdminGalleries = () => {
   const [newClient, setNewClient] = useState<any>({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    cpf: ''
   });
   
   const toggleCodeVisibility = (id: string) => {
@@ -206,7 +215,7 @@ export const AdminGalleries = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [gRes, clRes, favRes, admRes] = await Promise.all([
+      const [gRes, clRes, favRes, admRes, stRes] = await Promise.all([
         supabase.schema('app_carsena').from('galleries').select(`
           *,
           customers ( name ),
@@ -214,7 +223,8 @@ export const AdminGalleries = () => {
         `).order('created_at', { ascending: false }),
         supabase.schema('app_carsena').from('customers').select('*').order('name'),
         supabase.schema('app_carsena').from('photo_selections').select('photo_id').eq('is_favorite', true),
-        supabase.schema('app_carsena').from('photographers').select('*').order('name')
+        supabase.schema('app_carsena').from('photographers').select('*').order('name'),
+        supabase.schema('app_carsena').from('service_types').select('*').order('category, name')
       ]);
 
       if (gRes.error) throw gRes.error;
@@ -237,6 +247,7 @@ export const AdminGalleries = () => {
       setGalleries(enrichedGalleries);
       setCustomers(clRes.data || []);
       setAdmins(admRes.data || []);
+      setServiceTypes(stRes.data || []);
     } catch (error: any) {
       console.error("Erro ao carregar estúdio:", error);
       toast.error("Erro ao carregar dados do estúdio. Verifique sua conexão.");
@@ -290,7 +301,8 @@ export const AdminGalleries = () => {
         const { error } = await supabase.schema('app_carsena').from('customers').update({
           name: newClient.name,
           email: newClient.email,
-          phone: newClient.phone
+          phone: newClient.phone,
+          cpf: newClient.cpf
         }).eq('id', newClient.id);
         if (error) throw error;
         toast.success("Cliente atualizado");
@@ -304,6 +316,35 @@ export const AdminGalleries = () => {
       fetchData();
     } catch (err: any) {
       toast.error("Erro ao salvar cliente: " + err.message);
+    }
+  };
+
+    }
+  };
+
+  const handleSaveServiceType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.schema('app_carsena').from('service_types').insert([newServiceType]);
+      if (error) throw error;
+      toast.success("Tipo de serviço cadastrado!");
+      setIsServiceModalOpen(false);
+      setNewServiceType({ name: '', category: 'Ensaios (Portraits)' });
+      fetchData();
+    } catch (err: any) {
+      toast.error("Erro ao salvar tipo: " + err.message);
+    }
+  };
+
+  const handleDeleteServiceType = async (id: string, name: string) => {
+    if (!confirm(`Excluir o tipo de serviço "${name}"?`)) return;
+    try {
+      const { error } = await supabase.schema('app_carsena').from('service_types').delete().eq('id', id);
+      if (error) throw error;
+      toast.success("Tipo de serviço removido.");
+      fetchData();
+    } catch (err: any) {
+      toast.error('Erro: ' + err.message);
     }
   };
 
@@ -739,16 +780,19 @@ export const AdminGalleries = () => {
       <PageHeader 
         title="Meu Estúdio" 
         subtitle="Gestão de clientes, sessões e entregas de fotos" 
-        action={activeTab === 'sessions' ? "Nova Sessão" : activeTab === 'customers' ? "Novo Cliente" : "Novo Admin"} 
+        action={activeTab === 'sessions' ? "Nova Sessão" : activeTab === 'customers' ? "Novo Cliente" : activeTab === 'admins' ? "Novo Admin" : "Novo Tipo"} 
         onAction={() => {
            if (activeTab === 'sessions') {
               setIsModalOpen(true);
            } else if (activeTab === 'customers') {
-              setNewClient({ name: '', email: '', phone: '' });
+              setNewClient({ name: '', email: '', phone: '', cpf: '' });
               setIsCustomerModalOpen(true);
-           } else {
+           } else if (activeTab === 'admins') {
               setNewAdmin({ name: '', email: '', user_type: 'photographer' });
               setIsAdminModalOpen(true);
+           } else {
+              setNewServiceType({ name: '', category: 'Ensaios (Portraits)' });
+              setIsServiceModalOpen(true);
            }
         }}
       />
@@ -786,6 +830,16 @@ export const AdminGalleries = () => {
             >
               Equipe
               {activeTab === 'admins' && <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
+            </button>
+            <button 
+              onClick={() => setActiveTab('services')}
+              className={cn(
+                "text-[10px] font-bold uppercase tracking-[0.4em] pb-4 transition-all relative",
+                activeTab === 'services' ? "text-luxury-gold" : "text-luxury-cream/30 hover:text-luxury-cream"
+              )}
+            >
+              Serviços
+              {activeTab === 'services' && <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
             </button>
           </div>
 
@@ -852,114 +906,151 @@ export const AdminGalleries = () => {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-white/5 bg-white/2">
-                  <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nome</th>
-                  <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Sessões</th>
-                  <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nome</th>
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Sessões</th>
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCustomers.map((customer) => (
+                <tr key={customer.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                  <td className="p-6">
+                    <p className="text-xs uppercase tracking-widest font-bold">{customer.name}</p>
+                    <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">
+                      {customer.email} • {customer.phone || 'Sem Telefone'}
+                      {customer.cpf && ` • CPF: ${customer.cpf}`}
+                    </p>
+                  </td>
+                  <td className="p-6">
+                    <span className="text-[10px] text-luxury-cream/50 font-bold">
+                      {galleries.filter(g => g.customer_id === customer.id).length}
+                    </span>
+                  </td>
+                  <td className="p-6">
+                    <div className="flex justify-end items-center gap-4">
+                      <button 
+                         className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors"
+                         onClick={(e) => {
+                            e.stopPropagation();
+                            setNewClient(customer);
+                            setIsCustomerModalOpen(true);
+                         }}
+                      >
+                         Editar
+                      </button>
+                      <button 
+                         className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
+                         onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCustomer(customer.id, customer.name);
+                         }}
+                      >
+                         Excluir
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredCustomers.map((customer) => (
-                  <tr key={customer.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                    <td className="p-6">
-                      <p className="text-xs uppercase tracking-widest font-bold">{customer.name}</p>
-                      <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">{customer.email} • {customer.phone || 'Sem Telefone'}</p>
-                      <div className="flex items-center gap-3 mt-1.5">
-                         <p className="text-[8px] text-luxury-gold/60 uppercase tracking-widest">
-                           Cód: {revealedCodes[customer.id] ? customer.access_code : '••••' }
-                         </p>
-                         <button 
-                          onClick={() => toggleCodeVisibility(customer.id)}
-                          className="text-luxury-gold/30 hover:text-luxury-gold transition-colors"
-                         >
-                           {revealedCodes[customer.id] ? <EyeOff size={10} /> : <Eye size={10} />}
-                         </button>
-                      </div>
-                    </td>
-                    <td className="p-6">
-                      <span className="text-[10px] text-luxury-cream/50 font-bold">
-                        {galleries.filter(g => g.customer_id === customer.id).length}
-                      </span>
-                    </td>
-                    <td className="p-6">
-                      <div className="flex justify-end items-center gap-4">
-                        <button 
-                           className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors"
-                           onClick={(e) => {
-                              e.stopPropagation();
-                              setNewClient(customer);
-                              setIsCustomerModalOpen(true);
-                           }}
-                        >
-                           Editar
-                        </button>
-                        <button 
-                           className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
-                           onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCustomer(customer.id, customer.name);
-                           }}
-                        >
-                           Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          /* Admins/Team Table View */
-          <div className="bg-white/5 border border-white/5 overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/5 bg-white/2">
-                  <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Membro</th>
-                  <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nível</th>
-                  <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : activeTab === 'admins' ? (
+        /* Admins/Team Table View */
+        <div className="bg-white/5 border border-white/5 overflow-hidden">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/2">
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Membro</th>
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nível</th>
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {admins.map((p) => (
+                <tr key={p.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                  <td className="p-6">
+                    <p className="text-xs uppercase tracking-widest font-bold">{p.name}</p>
+                    <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">{p.email}</p>
+                  </td>
+                  <td className="p-6">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold/60">
+                      {p.user_type === 'admin' ? 'Proprietário' : 'Fotógrafo'}
+                    </span>
+                  </td>
+                  <td className="p-6">
+                    <div className="flex justify-end items-center gap-4">
+                      <button 
+                         className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors"
+                         onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingAdmin(p);
+                            setIsAdminModalOpen(true);
+                         }}
+                      >
+                         Editar
+                      </button>
+                      <button 
+                         className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
+                         onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteAdmin(p.id, p.name);
+                         }}
+                      >
+                         Excluir
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {admins.map((p) => (
-                  <tr key={p.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                    <td className="p-6">
-                      <p className="text-xs uppercase tracking-widest font-bold">{p.name}</p>
-                      <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">{p.email}</p>
-                    </td>
-                    <td className="p-6">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold/60">
-                        {p.user_type === 'admin' ? 'Proprietário' : 'Fotógrafo'}
-                      </span>
-                    </td>
-                    <td className="p-6">
-                      <div className="flex justify-end items-center gap-4">
-                        <button 
-                           className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors"
-                           onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingAdmin(p);
-                              setIsAdminModalOpen(true);
-                           }}
-                        >
-                           Editar
-                        </button>
-                        <button 
-                           className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
-                           onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteAdmin(p.id, p.name);
-                           }}
-                        >
-                           Excluir
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Tipos de Serviço Table View */
+        <div className="bg-white/5 border border-white/5 overflow-hidden">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/2">
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Categoria</th>
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nome do Tipo</th>
+                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {serviceTypes.map((st) => (
+                <tr key={st.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                  <td className="p-6">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold/60 px-2 py-1 bg-luxury-gold/5 border border-luxury-gold/20">
+                      {st.category}
+                    </span>
+                  </td>
+                  <td className="p-6">
+                    <p className="text-xs uppercase tracking-widest font-bold">{st.name}</p>
+                  </td>
+                  <td className="p-6 text-right">
+                    <button 
+                       className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
+                       onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteServiceType(st.id, st.name);
+                       }}
+                    >
+                       Excluir
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {serviceTypes.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="p-20 text-center text-[10px] uppercase tracking-widest text-luxury-cream/20">
+                    Nenhum tipo de serviço cadastrado
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
       </div>
 
       {/* New Session (Gallery) Modal */}
@@ -1001,15 +1092,21 @@ export const AdminGalleries = () => {
               onChange={(val) => setNewGallery({ ...newGallery, date: val })}
             />
             <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold">Tipo</label>
+              <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold">Tipo de Serviço</label>
               <select 
                 value={newGallery.event_type}
                 onChange={(e) => setNewGallery({ ...newGallery, event_type: e.target.value })}
                 className="w-full bg-white/5 border border-white/5 py-4 px-4 text-xs text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
               >
-                <option value="Wedding" className="bg-luxury-black">Wedding</option>
-                <option value="Portrait" className="bg-luxury-black">Portrait</option>
-                <option value="Event" className="bg-luxury-black">Event</option>
+                <option value="" className="bg-luxury-black">Selecionar Tipo...</option>
+                {/* Agrupamento por categoria */}
+                {Array.from(new Set(serviceTypes.map(s => s.category))).map(cat => (
+                  <optgroup key={cat} label={cat} className="bg-luxury-black text-luxury-gold">
+                    {serviceTypes.filter(s => s.category === cat).map(st => (
+                      <option key={st.id} value={st.name} className="bg-luxury-black text-white">{st.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>
@@ -1180,10 +1277,50 @@ export const AdminGalleries = () => {
             value={newClient.phone}
             onChange={(val) => setNewClient({ ...newClient, phone: val })}
           />
+          <FormInput 
+            label="CPF (Opcional)" 
+            placeholder="000.000.000-00" 
+            icon={<CreditCard size={16} />} 
+            value={newClient.cpf || ''}
+            onChange={(val) => setNewClient({ ...newClient, cpf: formatCPF(val) })}
+          />
           
           <div className="pt-6">
             <button className="w-full bg-luxury-gold text-black py-5 text-[11px] font-bold uppercase tracking-[0.4em] hover:bg-white transition-all shadow-xl">
               Salvar Cadastro
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* New Service Type Modal */}
+      <Modal isOpen={isServiceModalOpen} onClose={() => setIsServiceModalOpen(false)} title="Novo Tipo de Serviço">
+        <form className="space-y-6" onSubmit={handleSaveServiceType}>
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold">Categoria</label>
+            <select 
+              value={newServiceType.category}
+              onChange={(e) => setNewServiceType({ ...newServiceType, category: e.target.value })}
+              className="w-full bg-white/5 border border-white/5 py-4 px-4 text-xs text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
+            >
+              <option value="Eventos Sociais" className="bg-luxury-black">Eventos Sociais</option>
+              <option value="Ensaios (Portraits)" className="bg-luxury-black">Ensaios (Portraits)</option>
+              <option value="Comercial" className="bg-luxury-black">Comercial</option>
+              <option value="Editorial" className="bg-luxury-black">Editorial</option>
+            </select>
+          </div>
+          <FormInput 
+            label="Nome do Tipo" 
+            placeholder="Ex: Debutante" 
+            icon={<Camera size={16} />} 
+            value={newServiceType.name}
+            onChange={(val) => setNewServiceType({ ...newServiceType, name: val })}
+            required
+          />
+          
+          <div className="pt-6">
+            <button className="w-full bg-luxury-gold text-black py-5 text-[11px] font-bold uppercase tracking-[0.4em] hover:bg-white transition-all shadow-xl">
+              Salvar Tipo de Serviço
             </button>
           </div>
         </form>
@@ -1264,15 +1401,20 @@ export const AdminGalleries = () => {
                 onChange={(val) => setEditGallery({ ...editGallery, date: val })}
               />
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold">Tipo</label>
+                <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold">Tipo de Serviço</label>
                 <select 
                   value={editGallery.event_type}
                   onChange={(e) => setEditGallery({ ...editGallery, event_type: e.target.value })}
                   className="w-full bg-white/5 border border-white/5 py-4 px-4 text-xs text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
                 >
-                  <option value="Wedding" className="bg-luxury-black">Wedding</option>
-                  <option value="Portrait" className="bg-luxury-black">Portrait</option>
-                  <option value="Event" className="bg-luxury-black">Event</option>
+                  <option value="" className="bg-luxury-black">Selecionar Tipo...</option>
+                  {Array.from(new Set(serviceTypes.map(s => s.category))).map(cat => (
+                    <optgroup key={cat} label={cat} className="bg-luxury-black text-luxury-gold">
+                      {serviceTypes.filter(s => s.category === cat).map(st => (
+                        <option key={st.id} value={st.name} className="bg-luxury-black text-white">{st.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
             </div>
