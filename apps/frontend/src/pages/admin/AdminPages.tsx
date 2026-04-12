@@ -806,7 +806,7 @@ export const AdminGalleries = () => {
               )}
             >
               Sessões
-              {activeTab === 'sessions' && <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
+              {activeTab === 'sessions' && <motion.div layoutId="tabIndicator" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
             </button>
             <button 
               onClick={() => setActiveTab('customers')}
@@ -816,7 +816,7 @@ export const AdminGalleries = () => {
               )}
             >
               Clientes
-              {activeTab === 'customers' && <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
+              {activeTab === 'customers' && <motion.div layoutId="tabIndicator" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
             </button>
             <button 
               onClick={() => setActiveTab('admins')}
@@ -826,7 +826,7 @@ export const AdminGalleries = () => {
               )}
             >
               Equipe
-              {activeTab === 'admins' && <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
+              {activeTab === 'admins' && <motion.div layoutId="tabIndicator" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
             </button>
             <button 
               onClick={() => setActiveTab('services')}
@@ -836,7 +836,7 @@ export const AdminGalleries = () => {
               )}
             >
               Serviços
-              {activeTab === 'services' && <motion.div layoutId="activeTab" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
+              {activeTab === 'services' && <motion.div layoutId="tabIndicator" className="absolute bottom-[-1px] left-0 right-0 h-px bg-luxury-gold" />}
             </button>
           </div>
 
@@ -852,202 +852,230 @@ export const AdminGalleries = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => <div key={i} className="aspect-square bg-white/5 animate-pulse" />)}
-          </div>
-        ) : activeTab === 'sessions' ? (
-          <div className="space-y-10">
-            {/* Ungrouped (no customer match) */}
-            {uncategorizedGalleries.length > 0 && (
-              <div className="space-y-4">
-                <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-luxury-cream/20 border-b border-white/5 pb-2">Sem cliente vinculado</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {uncategorizedGalleries.map((gallery, i) => renderGalleryCard(gallery, i))}
-                </div>
-              </div>
-            )}
-
-{/* Per-client groups */}
-            {galleriesByCustomer.map(({ customer, galleries: clientGalleries }: { customer: any; galleries: any[] }) => (
-              <div key={customer.id} className="space-y-4">
-                <div className="flex items-center gap-4 border-b border-white/5 pb-3">
-                  <div className="w-8 h-8 bg-luxury-gold/10 border border-luxury-gold/30 flex items-center justify-center">
-                    <span className="text-luxury-gold text-xs font-bold">{customer.name.charAt(0)}</span>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-luxury-cream">{customer.name}</p>
-                    <p className="text-[8px] text-luxury-cream/30 uppercase tracking-widest">{clientGalleries.length} sess{clientGalleries.length === 1 ? 'ão' : 'ões'}</p>
-                  </div>
-                </div>
-                {clientGalleries.length === 0 ? (
-                  <p className="text-[9px] text-luxury-cream/20 uppercase tracking-widest pl-12">Nenhuma sessão para este cliente</p>
-                ) : (
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div 
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {[1, 2, 3].map(i => <div key={i} className="aspect-square bg-white/5 animate-pulse" />)}
+            </motion.div>
+          ) : activeTab === 'sessions' ? (
+            <motion.div 
+              key="sessions"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-10"
+            >
+              {/* Ungrouped (no customer match) */}
+              {uncategorizedGalleries.length > 0 && (
+                <div className="space-y-4">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.4em] text-luxury-cream/20 border-b border-white/5 pb-2">Sem cliente vinculado</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {clientGalleries.map((gallery: any, i: number) => renderGalleryCard(gallery, i))}
+                    {uncategorizedGalleries.map((gallery, i) => renderGalleryCard(gallery, i))}
                   </div>
-                )}
-              </div>
-            ))}
-
-            {galleriesByCustomer.length === 0 && uncategorizedGalleries.length === 0 && (
-              <div className="py-20 text-center border border-dashed border-white/5">
-                <p className="text-[10px] uppercase tracking-widest text-luxury-cream/20">Nenhuma galeria encontrada</p>
-              </div>
-            )}
-          </div>
-
-        ) : activeTab === 'customers' ? (
-          /* Customers Table View */
-          <div className="bg-white/5 border border-white/5 overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/5 bg-white/2">
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nome</th>
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Sessões</th>
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                  <td className="p-6">
-                    <p className="text-xs uppercase tracking-widest font-bold">{customer.name}</p>
-                    <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">
-                      {customer.email} • {customer.phone || 'Sem Telefone'}
-                      {customer.cpf && ` • CPF: ${customer.cpf}`}
-                    </p>
-                  </td>
-                  <td className="p-6">
-                    <span className="text-[10px] text-luxury-cream/50 font-bold">
-                      {galleries.filter(g => g.customer_id === customer.id).length}
-                    </span>
-                  </td>
-                  <td className="p-6">
-                    <div className="flex justify-end items-center gap-4">
-                      <button 
-                         className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors"
-                         onClick={(e) => {
-                            e.stopPropagation();
-                            setNewClient(customer);
-                            setIsCustomerModalOpen(true);
-                         }}
-                      >
-                         Editar
-                      </button>
-                      <button 
-                         className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
-                         onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteCustomer(customer.id, customer.name);
-                         }}
-                      >
-                         Excluir
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : activeTab === 'admins' ? (
-        /* Admins/Team Table View */
-        <div className="bg-white/5 border border-white/5 overflow-hidden">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-white/5 bg-white/2">
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Membro</th>
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nível</th>
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {admins.map((p) => (
-                <tr key={p.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                  <td className="p-6">
-                    <p className="text-xs uppercase tracking-widest font-bold">{p.name}</p>
-                    <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">{p.email}</p>
-                  </td>
-                  <td className="p-6">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold/60">
-                      {p.user_type === 'admin' ? 'Proprietário' : 'Fotógrafo'}
-                    </span>
-                  </td>
-                  <td className="p-6">
-                    <div className="flex justify-end items-center gap-4">
-                      <button 
-                         className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors"
-                         onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingAdmin(p);
-                            setIsAdminModalOpen(true);
-                         }}
-                      >
-                         Editar
-                      </button>
-                      <button 
-                         className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
-                         onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteAdmin(p.id, p.name);
-                         }}
-                      >
-                         Excluir
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        /* Tipos de Serviço Table View */
-        <div className="bg-white/5 border border-white/5 overflow-hidden">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-white/5 bg-white/2">
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Categoria</th>
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nome do Tipo</th>
-                <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {serviceTypes.map((st) => (
-                <tr key={st.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                  <td className="p-6">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold/60 px-2 py-1 bg-luxury-gold/5 border border-luxury-gold/20">
-                      {st.category}
-                    </span>
-                  </td>
-                  <td className="p-6">
-                    <p className="text-xs uppercase tracking-widest font-bold">{st.name}</p>
-                  </td>
-                  <td className="p-6 text-right">
-                    <button 
-                       className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
-                       onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteServiceType(st.id, st.name);
-                       }}
-                    >
-                       Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {serviceTypes.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="p-20 text-center text-[10px] uppercase tracking-widest text-luxury-cream/20">
-                    Nenhum tipo de serviço cadastrado
-                  </td>
-                </tr>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
-      )}
+
+              {/* Per-client groups */}
+              {galleriesByCustomer.map(({ customer, galleries: clientGalleries }: { customer: any; galleries: any[] }) => (
+                <div key={customer.id} className="space-y-4">
+                  <div className="flex items-center gap-4 border-b border-white/5 pb-3">
+                    <div className="w-8 h-8 bg-luxury-gold/10 border border-luxury-gold/30 flex items-center justify-center">
+                      <span className="text-luxury-gold text-xs font-bold">{customer.name.charAt(0)}</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-luxury-cream">{customer.name}</p>
+                      <p className="text-[8px] text-luxury-cream/30 uppercase tracking-widest">{clientGalleries.length} sess{clientGalleries.length === 1 ? 'ão' : 'ões'}</p>
+                    </div>
+                  </div>
+                  {clientGalleries.length === 0 ? (
+                    <p className="text-[9px] text-luxury-cream/20 uppercase tracking-widest pl-12">Nenhuma sessão para este cliente</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {clientGalleries.map((gallery: any, i: number) => renderGalleryCard(gallery, i))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {galleriesByCustomer.length === 0 && uncategorizedGalleries.length === 0 && (
+                <div className="py-20 text-center border border-dashed border-white/5">
+                  <p className="text-[10px] uppercase tracking-widest text-luxury-cream/20">Nenhuma galeria encontrada</p>
+                </div>
+              )}
+            </motion.div>
+          ) : activeTab === 'customers' ? (
+            <motion.div 
+              key="customers"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-white/5 border border-white/5 overflow-hidden"
+            >
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/2">
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nome</th>
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Sessões</th>
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCustomers.map((customer) => (
+                    <tr key={customer.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                      <td className="p-6">
+                        <p className="text-xs uppercase tracking-widest font-bold">{customer.name}</p>
+                        <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">
+                          {customer.email} • {customer.phone || 'Sem Telefone'}
+                          {customer.cpf && ` • CPF: ${customer.cpf}`}
+                        </p>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-[10px] text-luxury-cream/50 font-bold">
+                          {galleries.filter(g => g.customer_id === customer.id).length}
+                        </span>
+                      </td>
+                      <td className="p-6">
+                        <div className="flex justify-end items-center gap-4">
+                          <button 
+                             className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors"
+                             onClick={(e) => {
+                                e.stopPropagation();
+                                setNewClient(customer);
+                                setIsCustomerModalOpen(true);
+                             }}
+                          >
+                             Editar
+                          </button>
+                          <button 
+                             className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
+                             onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCustomer(customer.id, customer.name);
+                             }}
+                          >
+                             Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </motion.div>
+          ) : activeTab === 'admins' ? (
+            <motion.div 
+              key="admins"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-white/5 border border-white/5 overflow-hidden"
+            >
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/2">
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Membro</th>
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nível</th>
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {admins.map((p) => (
+                    <tr key={p.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                      <td className="p-6">
+                        <p className="text-xs uppercase tracking-widest font-bold">{p.name}</p>
+                        <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest mt-1">{p.email}</p>
+                      </td>
+                      <td className="p-6">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold/60">
+                          {p.user_type === 'admin' ? 'Proprietário' : 'Fotógrafo'}
+                        </span>
+                      </td>
+                      <td className="p-6">
+                        <div className="flex justify-end items-center gap-4">
+                          <button 
+                             className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors"
+                             onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingAdmin(p);
+                                setIsAdminModalOpen(true);
+                             }}
+                          >
+                             Editar
+                          </button>
+                          <button 
+                             className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
+                             onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAdmin(p.id, p.name);
+                             }}
+                          >
+                             Excluir
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="services"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-white/5 border border-white/5 overflow-hidden"
+            >
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/2">
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Categoria</th>
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nome do Tipo</th>
+                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {serviceTypes.map((st) => (
+                    <tr key={st.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                      <td className="p-6">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold/60 px-2 py-1 bg-luxury-gold/5 border border-luxury-gold/20">
+                          {st.category}
+                        </span>
+                      </td>
+                      <td className="p-6">
+                        <p className="text-xs uppercase tracking-widest font-bold">{st.name}</p>
+                      </td>
+                      <td className="p-6 text-right">
+                        <button 
+                           className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
+                           onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteServiceType(st.id, st.name);
+                           }}
+                        >
+                           Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {serviceTypes.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="p-20 text-center text-[10px] uppercase tracking-widest text-luxury-cream/20">
+                        Nenhum tipo de serviço cadastrado
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* New Session (Gallery) Modal */}
