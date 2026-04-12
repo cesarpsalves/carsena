@@ -24,6 +24,7 @@ export const Hero = ({ title, subtitle, imageUrl, primaryCtaLabel, secondaryCtaL
     <section 
       ref={containerRef}
       className="relative min-h-[100dvh] w-full overflow-hidden flex items-center bg-zinc-950"
+      style={{ position: 'relative' }} // Explicitly set for framer-motion useScroll target stability
     >
       {/* Background Layer with real Parallax */}
       <div className="absolute inset-0 bg-luxury-black/60 z-10" />
@@ -45,7 +46,7 @@ export const Hero = ({ title, subtitle, imageUrl, primaryCtaLabel, secondaryCtaL
       {/* Content */}
       <motion.div 
         style={{ opacity }}
-        className="relative z-20 container-premium h-full flex flex-col justify-center items-start px-6 lg:px-12 pt-12 md:pt-20"
+        className="relative z-20 container-premium h-full flex flex-col justify-center items-start px-6 lg:px-12 py-32 md:py-20"
       >
         <div className="max-w-5xl space-y-8 md:space-y-12">
           <div className="space-y-2">

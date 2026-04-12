@@ -5,6 +5,7 @@ import { Events } from "../components/sections/Events";
 import { Services } from "../components/sections/Services";
 import { Contact } from "../components/sections/Contact";
 import { Philosophy } from "../components/sections/Philosophy";
+import { InstagramSection } from "../components/sections/InstagramSection";
 import { cmsService } from "@/lib/cms";
 import type { LandingSettings, LandingSection } from "@/lib/cms";
 
@@ -15,6 +16,7 @@ const SECTION_COMPONENTS: Record<string, React.FC<any>> = {
   events: Events,
   services: Services,
   contact: Contact,
+  instagram: InstagramSection,
 };
 
 const Home = () => {
@@ -107,6 +109,20 @@ const Home = () => {
               phone: settings?.whatsapp_number,
               address: section.content?.address,
             };
+          }
+
+          if (section.section_key === 'instagram') {
+            componentProps.username = settings?.instagram_username || "carsena_fotografo";
+            componentProps.images = [
+              settings?.instagram_image_1,
+              settings?.instagram_image_2,
+              settings?.instagram_image_3
+            ];
+            componentProps.orientations = [
+              (settings?.instagram_orientation_1 as any) || 'portrait',
+              (settings?.instagram_orientation_2 as any) || 'landscape',
+              (settings?.instagram_orientation_3 as any) || 'portrait'
+            ];
           }
 
           return <Component key={section.id} {...componentProps} />;

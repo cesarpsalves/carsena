@@ -1,8 +1,10 @@
 import { useState, useEffect, type ReactNode, type FC } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Camera, Share2, Mail } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { cmsService } from "@/lib/cms";
+import type { LandingSettings } from "@/lib/cms";
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -11,22 +13,38 @@ interface PublicLayoutProps {
 export const PublicLayout: FC<PublicLayoutProps> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [enabledSections, setEnabledSections] = useState<Record<string, boolean>>({});
+  const [settings, setSettings] = useState<LandingSettings | null>(null);
   const { pathname } = useLocation();
 
   useEffect(() => {
-    async function loadSections() {
+    async function loadData() {
       try {
-        const sections = await cmsService.getSections();
+        // Set dynamic document title for better SEO context
+        if (pathname === '/') {
+          document.title = "Carsena | Fotografia Editorial e de Luxo";
+        } else if (pathname.includes('portfolio')) {
+          document.title = "Portfólio | Carsena Photo";
+        } else if (pathname.includes('login')) {
+          document.title = "Acesso Cliente | Carsena";
+        }
+
+        const [sections, settingsData] = await Promise.all([
+          cmsService.getSections(),
+          cmsService.getSettings()
+        ]);
+        
         const enabledMap = sections.reduce((acc: Record<string, boolean>, section: any) => ({
           ...acc,
           [section.section_key]: section.enabled
         }), {} as Record<string, boolean>);
+        
         setEnabledSections(enabledMap);
+        setSettings(settingsData);
       } catch (error) {
-        console.error("Error loading layout sections:", error);
+        console.error("Error loading layout data:", error);
       }
     }
-    loadSections();
+    loadData();
   }, []);
 
   // Prevent background scroll when menu is open
@@ -41,12 +59,25 @@ export const PublicLayout: FC<PublicLayoutProps> = ({ children }) => {
     };
   }, [isMenuOpen]);
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const url = "https://carsena.com.br";
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success("Link de acesso copiado!", {
+        description: "Agora você pode compartilhar com seus amigos."
+      });
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+      toast.error("Não foi possível copiar o link.");
+    });
+  };
+
   const navItems = [
     { name: "Início", path: "/", key: "hero" },
-    { name: "Portfólio", path: "#portfolio", key: "portfolio" },
+    { name: "Portfólio", path: "/#portfolio", key: "portfolio" },
     { name: "Eventos", path: "/#bilheteria", key: "events" },
-    { name: "Serviços", path: "#servicos", key: "services" },
-    { name: "Contato", path: "#contato", key: "contact" },
+    { name: "Serviços", path: "/#servicos", key: "services" },
+    { name: "Contato", path: "/#contato", key: "contact" },
     { name: "Acesso Cliente", path: "/login", isLogin: true },
   ];
 
@@ -167,12 +198,12 @@ export const PublicLayout: FC<PublicLayoutProps> = ({ children }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-primary text-primary-foreground py-20 px-6 mt-auto">
+      <footer className="bg-primary text-primary-foreground py-20 px-6 mt-auto border-t border-white/5">
         <div className="container-premium grid grid-cols-1 md:grid-cols-12 gap-12 lg:px-12">
           <div className="md:col-span-4 flex flex-col gap-6">
             <h2 className="font-serif text-3xl tracking-tight">Carsena Photo</h2>
-            <p className="text-primary-foreground/60 text-sm max-w-xs">
-              Capturando a essência de momentos únicos com um olhar editorial e sensível. Premium photography for timeless memories.
+            <p className="text-primary-foreground/60 text-sm max-w-xs italic leading-relaxed">
+              {settings?.footer_text || "Capturando a essência de momentos únicos com um olhar editorial e sensível. Premium photography for timeless memories."}
             </p>
           </div>
           
@@ -181,23 +212,45 @@ export const PublicLayout: FC<PublicLayoutProps> = ({ children }) => {
             <ul className="flex flex-col gap-3">
               {visibleNavItems.map(item => (
                 <li key={item.name}>
-                  <a href={item.path} className="text-sm text-primary-foreground/60 hover:text-accent transition-colors">
+                  <a href={item.path} className="text-xs text-primary-foreground/60 hover:text-accent transition-colors">
                     {item.name}
                   </a>
                 </li>
               ))}
             </ul>
           </div>
-
+ 
           <div className="md:col-span-4 flex flex-col gap-6">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">Siga-nos</h3>
             <div className="flex gap-6">
-              <a href="#" className="hover:text-accent transition-colors"><Camera size={20} /></a>
-              <a href="#" className="hover:text-accent transition-colors"><Share2 size={20} /></a>
-              <a href="#" className="hover:text-accent transition-colors"><Mail size={20} /></a>
+              <a 
+                href={`https://www.instagram.com/${settings?.instagram_username?.replace('@', '') || 'carsena_fotografo'}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="hover:text-accent transition-all hover:scale-110"
+              >
+                <Camera size={22} />
+              </a>
+              <button 
+                onClick={handleShare}
+                className="hover:text-accent transition-all hover:scale-110 cursor-pointer"
+                title="Compartilhar site"
+              >
+                <Share2 size={22} />
+              </button>
+              <a 
+                href={`mailto:${settings?.contact_email || 'contato@carsena.com.br'}`} 
+                className="hover:text-accent transition-all hover:scale-110"
+              >
+                <Mail size={22} />
+              </a>
             </div>
-            <p className="text-[10px] text-primary-foreground/40 mt-auto">
-              © 2026 Carsena Photo. All rights reserved.
+            <div className="space-y-1">
+              <p className="text-[10px] text-primary-foreground/40 font-bold uppercase tracking-widest">Localização</p>
+              <p className="text-[10px] text-primary-foreground/60">{settings?.whatsapp_number && 'Recife, Pernambuco - Brasil'}</p>
+            </div>
+            <p className="text-[10px] text-primary-foreground/20 mt-auto pt-8">
+              © {new Date().getFullYear()} Carsena Photo. Premium Photography System.
             </p>
           </div>
         </div>

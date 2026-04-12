@@ -74,7 +74,7 @@ export const Events = ({ title, subtitle }: EventsProps) => {
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
           {events.map((event) => {
             const activeTier = event.ticket_tiers?.find(t => t.active) || event.ticket_tiers?.[0];
             const isSoldOut = !activeTier || activeTier.stock_sold >= activeTier.stock_total;
@@ -83,7 +83,7 @@ export const Events = ({ title, subtitle }: EventsProps) => {
             const thumbUrl = event.thumbnail_url ? getStoragePublicUrl(event.thumbnail_url) : "/assets/placeholder-event.png";
 
             return (
-              <div key={event.id} className="group flex flex-col bg-white border border-luxury-black/5 hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden shadow-sm w-full md:w-[calc(50%-24px)] lg:w-[calc(33.333%-32px)] max-w-sm">
+              <div key={event.id} className="group flex flex-col bg-white border border-luxury-black/5 hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden shadow-sm w-full mx-auto max-w-sm">
                 <div className="relative aspect-[4/5] overflow-hidden">
                   <img 
                     src={thumbUrl} 

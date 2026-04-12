@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../../components/layout/AdminLayout";
 import { 
   Save, 
@@ -12,12 +13,15 @@ import {
   Settings as SettingsIcon,
   LayoutGrid,
   Calendar,
+  Star,
   Trash2,
   Ticket,
   ShieldCheck,
   CreditCard,
   GripVertical,
   Upload,
+  Mail,
+  Phone,
   X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,21 +30,24 @@ import { cmsService } from "@/lib/cms";
 import type { LandingSettings, LandingSection } from "@/lib/cms";
 import { eventService } from "@/lib/events";
 import type { Event, TicketTier } from "@/lib/events";
-import { getStoragePublicUrl } from '@/lib/storage';
+import { getStoragePublicUrl, uploadDirect, deleteDirect } from '@/lib/storage';
 import { portfolioService, getPortfolioPublicUrl } from "@/lib/portfolio";
 import type { PortfolioImage } from "@/lib/portfolio";
 
 const tabs = [
   { id: "identity", label: "Identidade", icon: <SettingsIcon size={18} /> },
   { id: "sections", label: "Seções & Ordem", icon: <LayoutGrid size={18} /> },
-  { id: "content", label: "Conteúdo", icon: <Type size={18} /> },
   { id: "portfolio", label: "Portfólio", icon: <ImageIcon size={18} /> },
+  { id: "services", label: "Serviços", icon: <Star size={18} /> },
   { id: "events", label: "Eventos & Ingressos", icon: <Calendar size={18} /> },
+  { id: "contact", label: "Contato", icon: <Mail size={18} /> },
+  { id: "footer", label: "Rodapé", icon: <Type size={18} /> },
   { id: "coupons", label: "Cupons", icon: <Ticket size={18} /> },
   { id: "premium", label: "Premium", icon: <ShieldCheck size={18} /> },
 ];
 
 export const CMSManager = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab ] = useState("identity");
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -75,7 +82,27 @@ export const CMSManager = () => {
         portfolioService.getImages(),
       ]);
       setSettings(settingsData);
-      setSections(sectionsData);
+      
+      // Initialize services with defaults if empty to help the user
+      const initializedSections = sectionsData.map(s => {
+        if (s.section_key === 'services' && (!s.content?.services || s.content.services.length === 0)) {
+          return {
+            ...s,
+            content: {
+              ...s.content,
+              services: [
+                { title: "Casamentos", description: "Cobertura completa com olhar documental e artístico para o seu grande dia.", active: true },
+                { title: "Ensaios Premium", description: "Retratos que revelam sua melhor versão em locações exclusivas.", active: true },
+                { title: "Eventos Sociais", description: "Capturando a energia e a emoção de celebrações especiais.", active: true },
+                { title: "Galerias Privativas", description: "Entrega digital elegante com proteção por senha e seleção intuitiva.", active: true }
+              ]
+            }
+          };
+        }
+        return s;
+      });
+      
+      setSections(initializedSections);
       setEvents(eventsData);
       setCoupons(couponsData);
       setPortfolioImages(portfolioData);
@@ -116,6 +143,30 @@ export const CMSManager = () => {
       setPortfolioUploading(false);
     }
   }, []);
+
+  const handleInstagramUpload = async (num: number, file: File) => {
+    if (!settings) return;
+    try {
+      // 1. Verificar se a imagem atual é do Cloudflare R2 para deletar a antiga
+      const currentUrl = settings[`instagram_image_${num}` as keyof LandingSettings] as string;
+      if (currentUrl && currentUrl.includes('r2.dev')) {
+        const key = currentUrl.split('r2.dev/')[1];
+        if (key) await deleteDirect([key]);
+      }
+
+      // 2. Fazer upload da nova imagem
+      const storagePath = await uploadDirect(file, 'instagram');
+      const publicUrl = getStoragePublicUrl(storagePath);
+      
+      setSettings({
+        ...settings,
+        [`instagram_image_${num}`]: publicUrl
+      });
+    } catch (error) {
+      console.error("Erro no upload do Instagram:", error);
+      alert("Falha ao subir imagem. Tente novamente.");
+    }
+  };
 
   const handlePortfolioDelete = async (id: string) => {
     if (!confirm('Remover esta foto do portfólio?')) return;
@@ -277,77 +328,285 @@ export const CMSManager = () => {
                 exit={{ opacity: 0, x: 10 }}
                 className="space-y-12"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-6">
-                    <h3 className="text-serif text-2xl text-luxury-cream italic">Hero / Impacto</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                  <div className="space-y-8">
                     <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold block">Título Principal</label>
-                      <input 
-                        type="text" 
-                        value={settings.hero_title || ""}
-                        onChange={(e) => setSettings({...settings, hero_title: e.target.value})}
-                        className="w-full bg-black/40 border border-white/10 px-4 py-4 text-luxury-cream font-serif text-lg focus:border-luxury-gold outline-none transition-colors"
-                      />
+                      <h3 className="text-serif text-2xl text-luxury-cream italic">Hero / Impacto</h3>
+                      <p className="text-xs text-luxury-cream/40 max-w-sm">Esta é a primeira coisa que seus clientes veem ao abrir o site.</p>
                     </div>
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold block">Subtítulo</label>
-                      <textarea 
-                        rows={3}
-                        value={settings.hero_subtitle || ""}
-                        onChange={(e) => setSettings({...settings, hero_subtitle: e.target.value})}
-                        className="w-full bg-black/40 border border-white/10 px-4 py-4 text-luxury-cream font-sans text-sm focus:border-luxury-gold outline-none transition-colors resize-none"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    <h3 className="text-serif text-2xl text-luxury-cream italic">Contato da Vitrine</h3>
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold block">WhatsApp / Telefone</label>
-                      <input 
-                        type="text" 
-                        value={settings.whatsapp_number || ""}
-                        onChange={(e) => setSettings({...settings, whatsapp_number: e.target.value})}
-                        placeholder="Ex: 5511999999999"
-                        className="w-full bg-black/40 border border-white/10 px-4 py-3 text-luxury-cream text-xs outline-none focus:border-luxury-gold transition-colors"
-                      />
-                    </div>
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold block">E-mail de Contato</label>
-                      <input 
-                        type="email" 
-                        value={settings.contact_email || ""}
-                        onChange={(e) => setSettings({...settings, contact_email: e.target.value})}
-                        placeholder="contato@exemplo.com"
-                        className="w-full bg-black/40 border border-white/10 px-4 py-3 text-luxury-cream text-xs outline-none focus:border-luxury-gold transition-colors"
-                      />
-                    </div>
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold block">Instagram (@usuario)</label>
-                      <input 
-                        type="text" 
-                        value={settings.instagram_username || ""}
-                        onChange={(e) => setSettings({...settings, instagram_username: e.target.value})}
-                        placeholder="@seu-perfil"
-                        className="w-full bg-black/40 border border-white/10 px-4 py-3 text-luxury-cream text-xs outline-none focus:border-luxury-gold transition-colors"
-                      />
+
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Título Principal</label>
+                        <input 
+                          type="text" 
+                          value={settings.hero_title || ""}
+                          onChange={(e) => setSettings({...settings, hero_title: e.target.value})}
+                          className="w-full bg-black/40 border border-white/10 px-6 py-4 text-luxury-cream font-serif text-xl focus:border-luxury-gold outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Subtítulo</label>
+                        <textarea 
+                          rows={3} 
+                          value={settings.hero_subtitle || ""}
+                          onChange={(e) => setSettings({...settings, hero_subtitle: e.target.value})}
+                          className="w-full bg-black/40 border border-white/10 px-6 py-4 text-luxury-cream text-sm focus:border-luxury-gold outline-none resize-none leading-relaxed"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Imagem de Fundo (URL)</label>
+                        <input 
+                          type="text" 
+                          value={settings.hero_image_url || ""}
+                          onChange={(e) => setSettings({...settings, hero_image_url: e.target.value})}
+                          className="w-full bg-black/40 border border-white/10 px-6 py-4 text-luxury-cream text-[11px] focus:border-luxury-gold outline-none font-mono"
+                          placeholder="https://..."
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="md:col-span-2 space-y-6 pt-8 border-t border-white/5">
-                    <h3 className="text-serif text-2xl text-luxury-cream italic">Proteção de Mídia</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold block">Texto da Marca d'água</label>
+                  <div className="space-y-8">
+                    <div className="space-y-4">
+                      <h3 className="text-serif text-2xl text-luxury-cream italic">Chamadas para Ação (CTAs)</h3>
+                      <p className="text-xs text-luxury-cream/40 max-w-sm">Botões que guiam o cliente para a conversão.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Botão Principal</label>
+                        <input 
+                          type="text" 
+                          value={settings.hero_cta_primary_label || ""}
+                          onChange={(e) => setSettings({...settings, hero_cta_primary_label: e.target.value})}
+                          className="w-full bg-black/40 border border-white/10 px-6 py-4 text-luxury-cream text-xs focus:border-luxury-gold outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Botão Secundário</label>
+                        <input 
+                          type="text" 
+                          value={settings.hero_cta_secondary_label || ""}
+                          onChange={(e) => setSettings({...settings, hero_cta_secondary_label: e.target.value})}
+                          className="w-full bg-black/40 border border-white/10 px-6 py-4 text-luxury-cream text-xs focus:border-luxury-gold outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-8 border-t border-white/5 space-y-6">
+                      <h3 className="text-serif text-2xl text-luxury-cream italic">Proteção de Mídia</h3>
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Texto da Marca d'água</label>
                         <input 
                           type="text" 
                           value={settings.watermark_text || ""}
                           onChange={(e) => setSettings({...settings, watermark_text: e.target.value})}
-                          placeholder="EX: CARSENA DIGITAL"
-                          className="w-full bg-black/40 border border-white/10 px-4 py-3 text-luxury-cream text-xs outline-none focus:border-luxury-gold"
+                          className="w-full bg-black/40 border border-white/10 px-4 py-3 text-luxury-cream text-[11px] focus:border-luxury-gold outline-none"
                         />
-                        <p className="text-[9px] text-luxury-cream/40 italic">Este texto aparecerá repetido sobre as fotos nas galerias.</p>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "contact" && settings && (
+              <motion.div
+                key="contact"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-12"
+              >
+                <div className="space-y-4">
+                  <h3 className="text-serif text-2xl text-luxury-cream italic">Canais de Atendimento</h3>
+                  <p className="text-xs text-luxury-cream/40 max-w-lg">Configure como os clientes podem entrar em contato e te encontrar nas redes sociais.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                  <div className="space-y-8 p-8 bg-black/40 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-luxury-gold/10 flex items-center justify-center text-luxury-gold">
+                        <Phone size={14} />
+                      </div>
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold">Contato Direto</h4>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-white/40">WhatsApp / Telefone</label>
+                        <input 
+                          type="text" 
+                          placeholder="(00) 00000-0000"
+                          value={settings.whatsapp_number || ""}
+                          onChange={(e) => setSettings({...settings, whatsapp_number: e.target.value})}
+                          className="w-full bg-transparent border-b border-white/10 py-3 text-luxury-cream text-sm focus:border-luxury-gold outline-none transition-all"
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-white/40">E-mail de Contato</label>
+                        <input 
+                          type="email" 
+                          placeholder="seuemail@exemplo.com"
+                          value={settings.contact_email || ""}
+                          onChange={(e) => setSettings({...settings, contact_email: e.target.value})}
+                          className="w-full bg-transparent border-b border-white/10 py-3 text-luxury-cream text-sm focus:border-luxury-gold outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8 p-8 bg-black/40 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500">
+                        <Star size={14} />
+                      </div>
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-pink-500">Redes Sociais</h4>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-white/40">Instagram (@usuario)</label>
+                        <input 
+                          type="text" 
+                          placeholder="@seuinstagra"
+                          value={settings.instagram_username || ""}
+                          onChange={(e) => setSettings({...settings, instagram_username: e.target.value})}
+                          className="w-full bg-transparent border-b border-white/10 py-3 text-luxury-cream text-sm focus:border-luxury-gold outline-none transition-all"
+                        />
+                        <p className="text-[8px] text-white/20 italic">A divulgação do Instagram foi aprimorada com uma nova seção visual na página principal.</p>
+                      </div>
+
+                      <div className="pt-6 border-t border-white/5 space-y-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <label className="text-[9px] font-bold uppercase tracking-widest text-white/40">Imagens em Destaque (Instagram)</label>
+                            <span className="text-[7px] bg-luxury-gold/10 text-luxury-gold px-1.5 py-0.5 rounded-full font-bold uppercase">Edição Estúdio</span>
+                          </div>
+                          <p className="text-[8px] text-white/20 italic">Escolha até 3 fotos do seu computador ou use links diretos. Defina se a foto é Vertical ou Horizontal para o layout.</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-6">
+                          {[1, 2, 3].map((num) => (
+                            <div key={num} className="flex flex-col md:flex-row gap-4 p-4 bg-white/5 border border-white/5 rounded-sm group hover:border-luxury-gold/10 transition-all">
+                              {/* Preview & Upload Area */}
+                              <div className="relative group/img w-24 h-32 bg-black/40 flex-shrink-0 overflow-hidden border border-white/10 rounded-sm">
+                                {settings[`instagram_image_${num}` as keyof LandingSettings] ? (
+                                  <img 
+                                    src={settings[`instagram_image_${num}` as keyof LandingSettings] as string} 
+                                    alt={`Preview ${num}`} 
+                                    className="w-full h-full object-cover transition-all duration-700"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white/10">
+                                    <ImageIcon size={24} />
+                                  </div>
+                                )}
+                                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover/img:opacity-100 flex items-center justify-center cursor-pointer transition-all">
+                                  <Upload size={20} className="text-luxury-gold" />
+                                  <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleInstagramUpload(num, file);
+                                    }}
+                                  />
+                                </label>
+                              </div>
+
+                              {/* Info and Orientation */}
+                              <div className="flex-1 space-y-4">
+                                <div className="space-y-2">
+                                  <label className="text-[8px] text-luxury-gold uppercase tracking-widest font-bold">Origem / URL</label>
+                                  <input 
+                                    type="text" 
+                                    value={(settings[`instagram_image_${num}` as keyof LandingSettings] as string) || ""}
+                                    onChange={(e) => setSettings({...settings, [`instagram_image_${num}`]: e.target.value})}
+                                    className="w-full bg-black/60 border border-white/5 px-3 py-2 text-luxury-cream text-[10px] focus:border-luxury-gold outline-none font-mono"
+                                    placeholder="Link da imagem..."
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1.5">
+                                    <label className="text-[8px] text-white/30 uppercase tracking-widest font-bold">Orientação</label>
+                                    <select 
+                                      value={settings[`instagram_orientation_${num}` as keyof LandingSettings] as string || "portrait"}
+                                      onChange={(e) => setSettings({...settings, [`instagram_orientation_${num}`]: e.target.value})}
+                                      className="w-full bg-black/40 border border-white/5 px-2 py-2 text-luxury-cream text-[9px] focus:border-luxury-gold outline-none"
+                                    >
+                                      <option value="portrait">Retrato (Vertical)</option>
+                                      <option value="landscape">Paisagem (Horizontal)</option>
+                                    </select>
+                                  </div>
+                                  <div className="flex items-end">
+                                    <button 
+                                      type="button"
+                                      onClick={() => {
+                                        setSettings({
+                                          ...settings,
+                                          [`instagram_image_${num}`]: `/assets/instagram/pernambuco_${num}.png`,
+                                          [`instagram_orientation_${num}`]: num === 2 ? 'landscape' : 'portrait'
+                                        });
+                                      }}
+                                      className="w-full py-2 border border-white/5 text-[7px] font-bold uppercase tracking-widest text-white/20 hover:text-luxury-gold hover:border-luxury-gold/20 transition-all"
+                                    >
+                                      Resetar Imagem
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="p-3 bg-white/5 border border-white/5 rounded-sm">
+                           <p className="text-[8px] text-white/40 leading-relaxed italic">
+                             * Ao subir fotos do computador, elas serão armazenadas com segurança na nuvem (R2). 
+                             O layout da landing page se adapta automaticamente à orientação escolhida.
+                           </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "footer" && settings && (
+              <motion.div
+                key="footer"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-10"
+              >
+                <div className="space-y-4">
+                  <h3 className="text-serif text-2xl text-luxury-cream italic">Rodapé do Site</h3>
+                  <p className="text-xs text-luxury-cream/40 max-w-lg">Gerencie o texto final que aparece na base de todas as páginas.</p>
+                </div>
+
+                <div className="max-w-2xl space-y-6">
+                  <div className="space-y-3">
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Breve Descrição do Rodapé</label>
+                    <textarea 
+                      rows={4} 
+                      value={settings.footer_text || ""}
+                      onChange={(e) => setSettings({...settings, footer_text: e.target.value})}
+                      className="w-full bg-black/40 border border-white/10 px-6 py-6 text-luxury-cream text-sm focus:border-luxury-gold outline-none resize-none leading-relaxed italic"
+                      placeholder="Ex: Capturando a essência de momentos únicos com um olhar editorial..."
+                    />
+                    <div className="p-4 bg-white/5 border border-white/10">
+                      <p className="text-[9px] text-white/40 leading-relaxed font-sans">
+                        Este texto ajuda no SEO do seu site e reforça sua marca quando o cliente termina de navegar pela página.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -555,12 +814,25 @@ export const CMSManager = () => {
                           </button>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-luxury-cream">{section.section_key}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-luxury-cream">{section.section_key}</p>
+                            {section.section_key === 'events' && (
+                              <span className={cn(
+                                "text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter",
+                                events.length > 0 ? "bg-luxury-gold/20 text-luxury-gold" : "bg-red-500/10 text-red-500/60"
+                              )}>
+                                {events.length} {events.length === 1 ? 'Evento' : 'Eventos'} em Bilheteria
+                              </span>
+                            )}
+                          </div>
                           <h4 className="text-serif text-lg text-luxury-gold/80">{section.title || "Sem Título"}</h4>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-6">
+                        {section.section_key === 'events' && section.enabled && events.length === 0 && (
+                          <span className="text-[7px] text-red-500 font-bold animate-pulse uppercase tracking-[0.2em]">Aviso: Nenhuma venda ativa</span>
+                        )}
                         <div className="flex items-center gap-2">
                           <input 
                             type="checkbox" 
@@ -637,6 +909,129 @@ export const CMSManager = () => {
               </motion.div>
             )}
 
+            {activeTab === "services" && (
+              <motion.div
+                key="services"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-10"
+              >
+                <div className="space-y-4">
+                  <h3 className="text-serif text-2xl text-luxury-cream italic">Catálogo de Serviços</h3>
+                  <p className="text-xs text-luxury-cream/40 max-w-lg">
+                    Personalize os serviços exibidos no site. Mantenha as descrições curtas para um layout harmonioso.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {sections.find(s => s.section_key === 'services')?.content?.services?.map((service: any, idx: number) => (
+                    <div key={idx} className="p-6 bg-black/40 border border-white/5 space-y-4 relative group">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const newSections = [...sections];
+                          const sIdx = newSections.findIndex(s => s.section_key === 'services');
+                          newSections[sIdx].content.services.splice(idx, 1);
+                          setSections(newSections);
+                        }}
+                        className="absolute top-4 right-4 text-white/20 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Título do Serviço</label>
+                        <input 
+                          type="text"
+                          maxLength={30}
+                          value={service.title}
+                          onChange={(e) => {
+                            const newSections = [...sections];
+                            const sIdx = newSections.findIndex(s => s.section_key === 'services');
+                            newSections[sIdx].content.services[idx].title = e.target.value;
+                            setSections(newSections);
+                          }}
+                          className="w-full bg-transparent border-b border-white/10 py-2 text-luxury-cream font-serif focus:border-luxury-gold outline-none"
+                        />
+                        <p className="text-[7px] text-white/20 uppercase text-right">{service.title.length}/30</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Descrição Curta</label>
+                        <textarea 
+                          rows={2}
+                          maxLength={100}
+                          value={service.description}
+                          onChange={(e) => {
+                            const newSections = [...sections];
+                            const sIdx = newSections.findIndex(s => s.section_key === 'services');
+                            newSections[sIdx].content.services[idx].description = e.target.value;
+                            setSections(newSections);
+                          }}
+                          className="w-full bg-transparent border-b border-white/10 py-2 text-xs text-luxury-cream/70 focus:border-luxury-gold outline-none resize-none"
+                        />
+                        <p className="text-[7px] text-white/20 uppercase text-right">{service.description.length}/100</p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <input 
+                          type="checkbox"
+                          checked={service.active}
+                          onChange={(e) => {
+                            const newSections = [...sections];
+                            const sIdx = newSections.findIndex(s => s.section_key === 'services');
+                            newSections[sIdx].content.services[idx].active = e.target.checked;
+                            setSections(newSections);
+                          }}
+                          className="accent-luxury-gold"
+                        />
+                        <span className="text-[9px] uppercase tracking-widest text-white/40">Ativo na vitrine</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const newSections = [...sections];
+                      let sIdx = newSections.findIndex(s => s.section_key === 'services');
+                      if (sIdx === -1) return;
+                      
+                      const currentContent = newSections[sIdx].content || {};
+                      const currentServices = currentContent.services || [];
+                      
+                      newSections[sIdx].content = {
+                        ...currentContent,
+                        services: [
+                          ...currentServices,
+                          { title: 'Novo Serviço', description: 'Breve descrição do serviço oferecido.', active: true }
+                        ]
+                      };
+                      setSections(newSections);
+                    }}
+                    className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-white/5 hover:border-luxury-gold/30 transition-all gap-3 group min-h-[160px]"
+                  >
+                    <Plus size={24} className="text-white/20 group-hover:text-luxury-gold" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/20 group-hover:text-luxury-gold">Adicionar Serviço</span>
+                  </button>
+                </div>
+
+                <div className="p-4 bg-luxury-gold/5 border border-luxury-gold/20 flex gap-4">
+                  <div className="p-2 bg-luxury-gold/10 rounded-full h-fit">
+                    <Star size={16} className="text-luxury-gold" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold">Guia de Estilo (Regras)</p>
+                    <p className="text-[9px] text-luxury-cream/40 leading-relaxed">
+                      Para manter a elegância do seu catálogo, use títulos de até <span className="text-white">3 palavras</span> e descrições com no máximo <span className="text-white">2 linhas</span>. 
+                      Isso garante que os cards fiquem alinhados e a leitura seja fluida em dispositivos móveis.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === "events" && (
               <motion.div
                 key="events"
@@ -649,29 +1044,17 @@ export const CMSManager = () => {
                   <div className="space-y-8">
                     <div className="flex items-center justify-between">
                       <div className="space-y-4">
-                        <h3 className="text-serif text-2xl text-luxury-cream italic">Agenda de Eventos</h3>
-                        <p className="text-xs text-luxury-cream/40 max-w-lg">Gerencie workshops, vernissages e sessões exclusivas.</p>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-serif text-2xl text-luxury-cream italic">Agenda de Eventos</h3>
+                          <span className="text-[8px] bg-white/5 border border-white/10 px-2 py-1 text-white/40 uppercase tracking-widest">Sincronizado com Bilheteria</span>
+                        </div>
+                        <p className="text-xs text-luxury-cream/40 max-w-lg">Gerencie workshops, vernissages e sessões exclusivas. Estes dados são compartilhados com a aba Bilheteria.</p>
                       </div>
                       <button 
-                        onClick={() => setEditingEvent({ 
-                          title: '', 
-                          date: '', 
-                          location: '', 
-                          description: '', 
-                          status: 'active', 
-                          event_type: 'event', 
-                          ticket_tiers: [{ 
-                            name: 'Lote Único', 
-                            price: 0, 
-                            capacity: 50, 
-                            sold_count: 0, 
-                            active: true 
-                          }] 
-                        })}
+                        onClick={() => navigate('/admin/bilheteria')}
                         className="flex items-center gap-2 px-6 py-3 bg-luxury-gold/10 border border-luxury-gold/30 text-luxury-gold text-[10px] font-bold uppercase tracking-widest hover:bg-luxury-gold hover:text-black transition-all"
                       >
-                        <Plus size={16} />
-                        Novo Evento
+                        Ir para Bilheteria
                       </button>
                     </div>
 
@@ -693,21 +1076,11 @@ export const CMSManager = () => {
                           </div>
                           <div className="flex items-center gap-4">
                             <button 
-                              onClick={() => setEditingEvent(event)}
-                              className="p-3 text-luxury-cream/40 hover:text-luxury-gold transition-colors"
+                              onClick={() => navigate('/admin/bilheteria')}
+                              className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-white/40 text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
                             >
-                              <SettingsIcon size={16} />
-                            </button>
-                            <button 
-                              onClick={async () => {
-                                if (event.id && confirm('Deseja realmente desativar este evento?')) {
-                                  await eventService.deleteEvent(event.id);
-                                  fetchData();
-                                }
-                              }}
-                              className="p-3 text-luxury-cream/40 hover:text-red-500 transition-colors"
-                            >
-                              <Trash2 size={16} />
+                              <SettingsIcon size={12} />
+                              Gerenciar
                             </button>
                           </div>
                         </div>

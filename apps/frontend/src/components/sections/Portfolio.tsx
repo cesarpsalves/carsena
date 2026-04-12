@@ -68,30 +68,32 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('Todos');
 
+  const [displayPhotos, setDisplayPhotos] = useState<PortfolioPhoto[]>([]);
+
   useEffect(() => {
     let cancelled = false;
 
     portfolioService.getImages().then((images) => {
       if (cancelled) return;
+      
+      let allPhotos: PortfolioPhoto[] = [];
       if (images.length > 0) {
-        setPhotos(images.map(toPhoto));
+        allPhotos = images.map(toPhoto);
       } else {
-        setPhotos(DEFAULT_PHOTOS.map(p => ({ ...p, orientation: 'landscape' })) as PortfolioPhoto[]);
+        allPhotos = DEFAULT_PHOTOS.map(p => ({ ...p, orientation: 'landscape' })) as PortfolioPhoto[];
       }
+      
+      setPhotos(allPhotos);
+      
+      // Shuffle and pick 6
+      const shuffled = [...allPhotos].sort(() => 0.5 - Math.random());
+      setDisplayPhotos(shuffled.slice(0, 6));
+      
       setLoading(false);
     });
 
     return () => { cancelled = true; };
   }, []);
-
-  const categories = ['Todos', ...Array.from(new Set(photos.map(p => p.category).filter(Boolean)))];
-  
-  const filteredPhotos = activeCategory === 'Todos' 
-    ? photos 
-    : photos.filter(p => p.category === activeCategory);
-
-  // Limit photos per category
-  const displayPhotos = filteredPhotos.slice(0, 6);
 
   /**
    * Layout Logic:
@@ -117,54 +119,33 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
   return (
     <section id="portfolio" className="section-padding bg-luxury-cream">
       <div className="container-premium lg:px-12">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+        <div className="flex flex-col md:flex-row justify-between items-start mb-16 gap-8">
           <div className="space-y-4">
             <p className="text-luxury-gold font-bold text-[10px] uppercase tracking-[0.4em]">Trabalhos Selecionados</p>
             <h2 className="text-editorial text-5xl md:text-7xl font-playfair transition-all">
               {title || <>Portfólio <br />Editorial</>}
             </h2>
           </div>
-          <p className="max-w-xs text-sm text-luxury-black/60 font-sans leading-relaxed">
+          <p className="max-w-xs text-sm text-luxury-black/60 font-sans leading-relaxed md:pt-12">
             {subtitle || 'Nossa curadoria de momentos capturados com sensibilidade e técnica para criar memórias atemporais.'}
           </p>
         </div>
 
-        {/* Categories Bar */}
-        {!loading && categories.length > 1 && (
-          <div className="flex flex-wrap gap-8 mb-12 border-b border-luxury-black/5 pb-6">
-            {categories.map(category => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`text-[10px] font-bold uppercase tracking-widest transition-all relative pb-2 ${
-                  activeCategory === category 
-                    ? 'text-luxury-black' 
-                    : 'text-luxury-black/30 hover:text-luxury-black'
-                }`}
-              >
-                {category}
-                {activeCategory === category && (
-                  <div className="absolute bottom-0 left-0 w-full h-[2px] bg-luxury-gold" />
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-
         {loading ? (
           <div className="grid grid-cols-12 gap-4 md:gap-6">
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
-                className="col-span-12 md:col-span-6 h-[400px] bg-luxury-black/5 animate-pulse"
+                className="col-span-12 md:col-span-4 h-[400px] bg-luxury-black/5 animate-pulse"
               />
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-12 auto-rows-auto gap-4 md:gap-6">
             {displayPhotos.map((photo, index) => (
-              <div
+              <Link
                 key={photo.id}
+                to="/portfolio"
                 className={`${getPhotoClass(photo, index)} relative group overflow-hidden bg-luxury-black/5 flex items-center justify-center`}
               >
                 <img
@@ -185,7 +166,7 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
                     </h3>
                   )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

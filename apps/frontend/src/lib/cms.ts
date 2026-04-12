@@ -12,6 +12,12 @@ export interface LandingSettings {
   hero_cta_primary_label?: string;
   hero_cta_secondary_label?: string;
   footer_text?: string;
+  instagram_image_1?: string;
+  instagram_orientation_1?: 'portrait' | 'landscape';
+  instagram_image_2?: string;
+  instagram_orientation_2?: 'portrait' | 'landscape';
+  instagram_image_3?: string;
+  instagram_orientation_3?: 'portrait' | 'landscape';
   show_events?: boolean;
   show_galleries?: boolean;
   show_about?: boolean;

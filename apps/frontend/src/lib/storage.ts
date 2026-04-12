@@ -129,3 +129,22 @@ export const uploadDirect = async (file: File, prefix = "system"): Promise<strin
     throw error;
   }
 };
+
+/**
+ * Deleta arquivos do R2
+ */
+export const deleteDirect = async (keys: string[]): Promise<void> => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/storage/bulk`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys })
+    });
+
+    if (!response.ok) {
+      throw new Error("Falha ao deletar arquivos");
+    }
+  } catch (error) {
+    console.error("Erro no deleteDirect:", error);
+  }
+};
