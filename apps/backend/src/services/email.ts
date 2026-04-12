@@ -274,7 +274,7 @@ export const emailService = {
     resetLink: string
   }) {
     try {
-      await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: FROM_EMAIL,
         to: [to],
         replyTo: REPLY_TO_EMAIL,
@@ -292,7 +292,7 @@ export const emailService = {
               <a href="${resetData.resetLink}" style="${buttonStyle}">Redefinir Minha Senha</a>
               <p style="font-size: 12px; color: #999; margin-top: 15px;">Este link expira em 1 hora.</p>
             </div>
- 
+
             <p style="font-size: 13px; color: #666; background: #f9f9f9; padding: 15px; border-radius: 8px;">
               Caso o botão não funcione, copie e cole o link abaixo no seu navegador:<br/>
               <span style="word-break: break-all; color: #D4AF37;">${resetData.resetLink}</span>
@@ -304,9 +304,16 @@ export const emailService = {
           </div>
         `
       });
+
+      if (error) {
+        console.error('❌ Resend API Error (Password Reset):', error);
+        return { success: false, error };
+      }
+
+      console.log('✅ Password Reset Email Sent:', data?.id);
       return { success: true };
     } catch (error) {
-      console.error('Error sending password reset email:', error);
+      console.error('💥 Unexpected Error sending password reset email:', error);
       return { success: false, error };
     }
   },
@@ -319,7 +326,7 @@ export const emailService = {
     message: string
   }) {
     try {
-      await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: FROM_EMAIL,
         to: [REPLY_TO_EMAIL], // Envia para o fotógrafo
         replyTo: contactData.email, // Permite responder direto pro cliente
@@ -351,9 +358,16 @@ export const emailService = {
           </div>
         `
       });
+
+      if (error) {
+        console.error('❌ Resend API Error (Contact Lead):', error);
+        return { success: false, error };
+      }
+
+      console.log('✅ Contact Lead Email Sent:', data?.id);
       return { success: true };
     } catch (error) {
-      console.error('Error sending contact lead email:', error);
+      console.error('💥 Unexpected Error sending contact lead email:', error);
       return { success: false, error };
     }
   }

@@ -158,7 +158,7 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket }) => {
               className={`mt-8 flex items-center gap-3 bg-black border border-white/10 px-6 py-3 rounded-full hover:bg-white/5 transition-all group/wallet ${loadingWallet ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Wallet_Icon_2022.svg" 
+                src="https://img.icons8.com/color/480/google-wallet.png" 
                 alt="Google Wallet" 
                 className={`w-5 h-5 group-hover/wallet:scale-110 transition-transform ${loadingWallet ? 'animate-pulse' : ''}`}
               />

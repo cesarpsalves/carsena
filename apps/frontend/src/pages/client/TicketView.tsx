@@ -115,7 +115,7 @@ export const TicketView = () => {
                 className="flex items-center justify-center gap-3 bg-black text-white font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-white/10 border border-white/20 rounded-xl"
               >
                 <img 
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Wallet_Icon_2022.svg/512px-Google_Wallet_Icon_2022.svg.png" 
+                  src="https://img.icons8.com/color/480/google-wallet.png" 
                   alt="Google Wallet" 
                   className="w-5 h-5"
                 />
