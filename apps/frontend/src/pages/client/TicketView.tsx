@@ -2,6 +2,7 @@ import { ClientLayout } from "../../components/layout/ClientLayout";
 import { ArrowLeft, Share2, Smartphone } from "lucide-react";
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { ticketService } from "../../lib/tickets";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,47 +98,65 @@ export const TicketView = () => {
             {/* The Premium Ticket Card Component */}
             <TicketCard ticket={ticketData} />
 
-            {/* Additional Actions */}
-            <div className="flex flex-col gap-4">
-              <button 
-                onClick={async () => {
-                  try {
-                    const url = await ticketService.getGoogleWalletUrl(ticketData.id);
-                    if (url.startsWith('#')) {
-                      toast.error("Google Wallet não configurado no servidor.");
-                    } else {
-                      window.location.href = url;
-                    }
-                  } catch (err) {
-                    toast.error("Erro ao gerar link do Google Wallet.");
-                  }
-                }}
-                className="flex items-center justify-center gap-3 bg-black text-white font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-white/10 border border-white/20 rounded-xl"
-              >
-                <img 
-                  src="https://img.icons8.com/color/480/google-wallet.png" 
-                  alt="Google Wallet" 
-                  className="w-5 h-5"
-                />
-                Adicionar ao Google Wallet
-              </button>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button 
-                  onClick={() => toast.info("Integração Apple Wallet em breve!")}
-                  className="flex items-center justify-center gap-3 bg-white text-black font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-luxury-gold"
-                >
-                  <Smartphone size={16} />
-                  Apple Wallet
-                </button>
-                <button 
-                  onClick={handleShare}
-                  className="flex items-center justify-center gap-3 border border-white/20 text-white font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-white/10"
-                >
-                  <Share2 size={16} />
-                  Compartilhar
-                </button>
+            {/* Premium Wallet Instructions Guide */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden backdrop-blur-sm"
+            >
+              <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center gap-3">
+                <Smartphone size={18} className="text-luxury-gold" />
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white">Como salvar na sua carteira</h3>
               </div>
+              
+              <div className="p-6 space-y-8">
+                {/* Android / Google Wallet */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <img src="https://img.icons8.com/color/480/google-wallet.png" className="w-5 h-5" alt="Google Wallet" />
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold">Android / Google Wallet</span>
+                  </div>
+                  <ol className="space-y-3">
+                    {[
+                      "Tire um print (screenshot) deste ingresso.",
+                      "Abra o app da Carteira do Google.",
+                      "Toque em 'Adicionar à Carteira' (+).",
+                      "Selecione 'Todo o restante'.",
+                      "Escolha o print que você acabou de tirar."
+                    ].map((step, i) => (
+                      <li key={i} className="flex gap-4 text-[10px] text-white/50 leading-relaxed font-light">
+                        <span className="text-luxury-gold font-mono font-bold">{i + 1}.</span>
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                <div className="h-px bg-white/5 w-full" />
+
+                {/* iOS / Apple Wallet */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Smartphone size={20} className="text-white/40" />
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/40">iPhone / Apple Wallet</span>
+                  </div>
+                  <p className="text-[10px] text-white/40 leading-relaxed font-light">
+                    Tire um print deste ingresso e adicione aos seus <span className="text-white/60 font-medium">Favoritos</span> ou <span className="text-white/60 font-medium">Álbum de Fotos</span> para acesso rápido na portaria do evento.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* General Actions */}
+            <div className="pt-4">
+              <button 
+                onClick={handleShare}
+                className="w-full flex items-center justify-center gap-3 border border-white/10 text-white font-bold text-[10px] uppercase tracking-[0.2em] py-5 px-8 transition-all hover:bg-white/5 rounded-xl group"
+              >
+                <Share2 size={16} className="text-luxury-gold" />
+                Compartilhar este ingresso
+              </button>
             </div>
 
             <div className="text-center">

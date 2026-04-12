@@ -22,7 +22,6 @@ interface TicketCardProps {
 
 export const TicketCard: React.FC<TicketCardProps> = ({ ticket }) => {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
-  const [loadingWallet, setLoadingWallet] = useState(false);
 
   useEffect(() => {
     // Generate the visually beautiful QR Code to fit inside the pass
@@ -45,36 +44,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket }) => {
     generateQR();
   }, [ticket.ticket_code]);
 
-  const handleAddToWallet = async () => {
-    const toastId = "google-wallet-toast";
-    const { toast } = await import('sonner');
-    const { ticketService } = await import('../lib/tickets');
-
-    try {
-      setLoadingWallet(true);
-      toast.loading("Sincronizando com Google Wallet...", { id: toastId });
-      
-      const walletUrl = await ticketService.getGoogleWalletUrl(ticket.id);
-      
-      if (walletUrl.startsWith('#google-wallet-not-configured')) {
-        toast.error("Configuração pendente: As chaves do Google Wallet não foram configuradas no servidor.", { 
-          id: toastId,
-          duration: 5000 
-        });
-        return;
-      }
-
-      toast.success("Abrindo Google Wallet...", { id: toastId });
-      // Abrir em nova aba para salvar o passe
-      window.open(walletUrl, '_blank');
-      
-    } catch (err) {
-      console.error("Wallet Error:", err);
-      toast.error("Erro ao sincronizar com Google Wallet. Tente novamente.", { id: toastId });
-    } finally {
-      setLoadingWallet(false);
-    }
-  };
 
   return (
     <motion.div 
@@ -148,24 +117,6 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket }) => {
             <p className="text-[8px] uppercase tracking-[0.4em] text-white/30 mt-6 max-w-[200px] text-center">
               Apresente este código na tela do seu dispositivo na portaria.
             </p>
-
-            {/* Google Wallet Button Functional */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              disabled={loadingWallet}
-              onClick={handleAddToWallet}
-              className={`mt-8 flex items-center gap-3 bg-black border border-white/10 px-6 py-3 rounded-full hover:bg-white/5 transition-all group/wallet ${loadingWallet ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <img 
-                src="https://img.icons8.com/color/480/google-wallet.png" 
-                alt="Google Wallet" 
-                className={`w-5 h-5 group-hover/wallet:scale-110 transition-transform ${loadingWallet ? 'animate-pulse' : ''}`}
-              />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">
-                {loadingWallet ? 'Sincronizando...' : 'Add to Google Wallet'}
-              </span>
-            </motion.button>
         </div>
 
       </div>
