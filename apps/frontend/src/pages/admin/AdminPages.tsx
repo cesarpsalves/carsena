@@ -25,8 +25,7 @@ import {
   RefreshCw,
   Eye,
   EyeOff,
-  HelpCircle,
-  AlertTriangle
+  HelpCircle
 } from "lucide-react";
 import { eventService } from "@/lib/events";
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -2671,12 +2670,12 @@ const AdminTeam = () => {
 export const AdminSettings = () => {
   const { profile, refreshProfile } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') as 'profile' | 'team' | 'system' || 'profile';
-  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'system' | 'reset'>(initialTab);
+  const initialTab = searchParams.get('tab') as 'profile' | 'team' || 'profile';
+  const [activeTab, setActiveTab] = useState<'profile' | 'team'>(initialTab);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && (tab === 'profile' || tab === 'team' || tab === 'system' || tab === 'reset')) {
+    if (tab && (tab === 'profile' || tab === 'team')) {
       setActiveTab(tab as any);
     }
   }, [searchParams]);
@@ -2687,21 +2686,6 @@ export const AdminSettings = () => {
   const [bio, setBio] = useState(profile?.bio || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  // Security State
-  const [newPassword, setNewPassword] = useState('');
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-
-  // System Settings State
-  const [systemSettings, setSystemSettings] = useState({
-    asaas_key: '',
-    asaas_webhook: '',
-    cloudflare_id: '',
-    cloudflare_key: '',
-    cloudflare_secret: ''
-  });
-  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -2709,66 +2693,10 @@ export const AdminSettings = () => {
       setEmail(profile.email || '');
       setBio(profile.bio || '');
     }
-    if (activeTab === 'system') {
-      fetchSystemSettings();
-    }
-  }, [profile, activeTab]);
+  }, [profile]);
 
-  const fetchSystemSettings = async () => {
-    setIsLoadingSettings(true);
-    try {
-      const { data, error } = await supabase
-        .schema('app_carsena')
-        .from('system_settings')
-        .select('*');
-
-      if (error) throw error;
-
-      const settings = {
-        asaas_key: data.find(s => s.key === 'asaas_key')?.value?.secret || '',
-        asaas_webhook: data.find(s => s.key === 'asaas_webhook')?.value?.secret || '',
-        cloudflare_id: data.find(s => s.key === 'cloudflare_id')?.value?.secret || '',
-        cloudflare_key: data.find(s => s.key === 'cloudflare_key')?.value?.secret || '',
-        cloudflare_secret: data.find(s => s.key === 'cloudflare_secret')?.value?.secret || ''
-      };
-      setSystemSettings(settings);
-    } catch (error: any) {
-      console.error("Erro ao carregar configurações:", error);
-    } finally {
-      setIsLoadingSettings(false);
-    }
-  };
-
-  const handleSaveSystemSettings = async (type: 'asaas' | 'cloudflare') => {
-    setIsSavingSettings(true);
-    try {
-      const updates = [];
-      if (type === 'asaas') {
-        updates.push(
-          { key: 'asaas_key', value: { secret: systemSettings.asaas_key }, updated_at: new Date().toISOString() },
-          { key: 'asaas_webhook', value: { secret: systemSettings.asaas_webhook }, updated_at: new Date().toISOString() }
-        );
-      } else {
-        updates.push(
-          { key: 'cloudflare_id', value: { secret: systemSettings.cloudflare_id }, updated_at: new Date().toISOString() },
-          { key: 'cloudflare_key', value: { secret: systemSettings.cloudflare_key }, updated_at: new Date().toISOString() },
-          { key: 'cloudflare_secret', value: { secret: systemSettings.cloudflare_secret }, updated_at: new Date().toISOString() }
-        );
-      }
-
-      const { error } = await supabase
-        .schema('app_carsena')
-        .from('system_settings')
-        .upsert(updates, { onConflict: 'key' });
-
-      if (error) throw error;
-      toast.success("Configurações salvas com sucesso!");
-    } catch (error: any) {
-      toast.error("Erro ao salvar: " + error.message);
-    } finally {
-      setIsSavingSettings(false);
-    }
-  };
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2800,37 +2728,6 @@ export const AdminSettings = () => {
     }
   };
 
-  const handleResetEnvironment = async () => {
-    if (!confirm("⚠️ ATENÇÃO: Esta ação irá apagar TODAS as galerias, clientes, pedidos e ingressos de teste. Esta operação NÃO pode ser desfeita. Deseja prosseguir com a limpeza para entrega final?")) return;
-    
-    setIsResetting(true);
-    try {
-      // 1. Limpar Ingressos e Lotes
-      await supabase.schema('app_carsena').from('tickets').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.schema('app_carsena').from('ticket_tiers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      // 2. Limpar Pedidos e Financeiro
-      await supabase.schema('app_carsena').from('order_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.schema('app_carsena').from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.schema('app_carsena').from('payment_webhooks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      // 3. Limpar Galerias e Fotos
-      await supabase.schema('app_carsena').from('photo_access').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.schema('app_carsena').from('photo_selections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.schema('app_carsena').from('photos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.schema('app_carsena').from('galleries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.schema('app_carsena').from('portfolio_images').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      // 4. Limpar Clientes (não administradores)
-      await supabase.schema('app_carsena').from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      toast.success("Ambiente resetado com sucesso! O app está pronto para uso real.");
-    } catch (error: any) {
-      toast.error("Erro ao resetar: " + error.message);
-    } finally {
-      setIsResetting(false);
-    }
-  };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2881,24 +2778,6 @@ export const AdminSettings = () => {
                 )}
               >
                 <Users size={16} /> Equipe e Acessos
-              </button>
-              <button 
-                onClick={() => { setActiveTab('system'); setSearchParams({ tab: 'system' }); }}
-                className={cn(
-                  "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
-                  activeTab === 'system' ? "bg-luxury-gold text-black border-luxury-gold shadow-lg" : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                <Globe size={16} /> Sistema e Nuvem
-              </button>
-              <button 
-                onClick={() => { setActiveTab('reset'); setSearchParams({ tab: 'reset' }); }}
-                className={cn(
-                  "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
-                  activeTab === 'reset' ? "bg-red-600 text-white border-red-600 shadow-lg" : "bg-red-500/5 text-red-500/40 border-red-500/5 hover:bg-red-500/10 hover:text-red-500"
-                )}
-              >
-                <Trash2 size={16} /> Limpar App (Reset)
               </button>
             </>
           )}
@@ -2990,138 +2869,6 @@ export const AdminSettings = () => {
               </motion.div>
             )}
 
-            {activeTab === 'system' && isMaster && (
-              <motion.div 
-                key="tab-system" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                className="space-y-8"
-              >
-                {isLoadingSettings ? (
-                  <div className="p-20 text-center text-luxury-gold/20 text-[10px] uppercase tracking-widest animate-pulse">
-                    Carregando chaves de segurança...
-                  </div>
-                ) : (
-                  <>
-                    {/* Asaas */}
-                    <section className="bg-black/40 border border-white/5 p-8 lg:p-12 space-y-8">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-2xl font-light text-editorial">Financeiro</h3>
-                          <p className="text-[10px] text-white/20 uppercase tracking-widest">Integração com gateway Asaas</p>
-                        </div>
-                        <div className={cn(
-                          "px-3 py-1 border text-[8px] font-black uppercase tracking-widest rounded-full",
-                          systemSettings.asaas_key ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-red-500/10 border-red-500/20 text-red-500"
-                        )}>
-                          {systemSettings.asaas_key ? 'Ativo' : 'Pendente'}
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-6">
-                        <FormInput 
-                          label="API Key (Asaas)" 
-                          placeholder="$$$..." 
-                          type="password" 
-                          value={systemSettings.asaas_key}
-                          onChange={(val) => setSystemSettings({...systemSettings, asaas_key: val})}
-                        />
-                        <FormInput 
-                          label="Webhook Secret" 
-                          placeholder="Token de segurança" 
-                          type="password" 
-                          value={systemSettings.asaas_webhook}
-                          onChange={(val) => setSystemSettings({...systemSettings, asaas_webhook: val})}
-                        />
-                        <button 
-                          onClick={() => handleSaveSystemSettings('asaas')}
-                          disabled={isSavingSettings}
-                          className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all"
-                        >
-                          {isSavingSettings ? <RefreshCw className="animate-spin" size={14} /> : 'Atualizar Chaves Financeiras'}
-                        </button>
-                      </div>
-                    </section>
-
-                    {/* Cloudflare */}
-                    <section className="bg-black/40 border border-white/5 p-8 lg:p-12 space-y-8">
-                      <div>
-                        <h3 className="text-2xl font-light text-editorial">Armazenamento</h3>
-                        <p className="text-[10px] text-white/20 uppercase tracking-widest">Cloudflare R2 Bucket</p>
-                      </div>
-                      
-                      <div className="space-y-6">
-                        <FormInput 
-                          label="Account ID" 
-                          placeholder="ID da sua conta Cloudflare" 
-                          value={systemSettings.cloudflare_id}
-                          onChange={(val) => setSystemSettings({...systemSettings, cloudflare_id: val})}
-                        />
-                        <FormInput 
-                          label="Access Key" 
-                          placeholder="ID de acesso R2" 
-                          type="password" 
-                          value={systemSettings.cloudflare_key}
-                          onChange={(val) => setSystemSettings({...systemSettings, cloudflare_key: val})}
-                        />
-                        <FormInput 
-                          label="Secret Key" 
-                          placeholder="Chave secreta R2" 
-                          type="password" 
-                          value={systemSettings.cloudflare_secret}
-                          onChange={(val) => setSystemSettings({...systemSettings, cloudflare_secret: val})}
-                        />
-                        <button 
-                          onClick={() => handleSaveSystemSettings('cloudflare')}
-                          disabled={isSavingSettings}
-                          className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all"
-                        >
-                           {isSavingSettings ? <RefreshCw className="animate-spin" size={14} /> : 'Validar e Salvar Nuvem'}
-                        </button>
-                      </div>
-                    </section>
-                  </>
-                )}
-              </motion.div>
-            )}
-
-            {activeTab === 'reset' && isMaster && (
-                  <motion.div 
-                    key="tab-reset" 
-                    initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                    className="space-y-8"
-                  >
-                    <section className="bg-red-500/5 border border-red-500/10 p-8 lg:p-12 space-y-8">
-                       <div className="flex items-center gap-4 text-red-500 mb-6">
-                        <AlertTriangle size={32} />
-                        <div>
-                          <h3 className="text-2xl font-light text-editorial text-white">Limpeza para Entrega</h3>
-                          <p className="text-[10px] text-red-500/60 uppercase tracking-widest font-bold">Ação Irreversível</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-6 text-sm text-white/40 leading-relaxed uppercase tracking-widest text-[10px]">
-                        <p>Esta função foi criada para que você possa limpar todos os dados de teste gerados durante o desenvolvimento e entregar o app "zerado" para o seu cliente.</p>
-                        <ul className="list-disc list-inside space-y-2 text-red-500/40">
-                          <li>Remove todas as Galerias e Sessões</li>
-                          <li>Remove todos os Clientes (exceto equipe)</li>
-                          <li>Remove todos os Ingressos e Lotes</li>
-                          <li>Limpa o histórico financeiro e pedidos</li>
-                          <li>MANTÉM as chaves da Nuvem e Financeiras</li>
-                        </ul>
-                      </div>
-                      
-                      <div className="pt-6">
-                        <button 
-                          onClick={handleResetEnvironment}
-                          disabled={isResetting}
-                          className="w-full py-6 bg-red-600 text-white text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-red-500 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
-                        >
-                          {isResetting ? <RefreshCw className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                          {isResetting ? 'Limpando Ambiente...' : 'Confirmar Limpeza Total'}
-                        </button>
-                      </div>
-                    </section>
-                  </motion.div>
-                )}
           </AnimatePresence>
         </div>
       </div>

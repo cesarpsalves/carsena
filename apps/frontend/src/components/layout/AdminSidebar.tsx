@@ -28,7 +28,7 @@ const navItems = [
   { icon: <Maximize size={24} />, label: "Portaria", path: "/admin/validar", description: "Validar Ingresso" },
   { icon: <Layout size={24} />, label: "Vitrine", path: "/admin/vitrine", description: "Editar Meu Site" },
   { icon: <Wallet size={24} />, label: "Caixa", path: "/admin/caixa", description: "Financeiro" },
-  { icon: <Cloud size={24} />, label: "Nuvem", path: "/admin/ajustes?tab=system", description: "Espaço R2" },
+  { icon: <Cloud size={24} />, label: "Nuvem", path: "/admin/nuvem", description: "Espaço R2" },
   { icon: <Settings size={24} />, label: "Ajustes", path: "/admin/ajustes", description: "Configurações" },
 ];
 

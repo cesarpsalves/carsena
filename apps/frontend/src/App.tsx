@@ -7,6 +7,7 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import { Dashboard } from "./pages/admin/Dashboard";
 import { CMSManager } from "./pages/admin/CMSManager";
+import { CloudManager } from "./pages/admin/CloudManager";
 import { AdminScanner } from "./pages/admin/AdminScanner";
 import { AdminGalleries, AdminTickets, AdminFinance, AdminSettings } from "./pages/admin/AdminPages";
 import { ExperienceHome } from './pages/client/ExperienceHome';
@@ -53,6 +54,7 @@ function App() {
                   <Route path="validar" element={<AdminScanner />} />
                   <Route path="vitrine" element={<CMSManager />} />
                   <Route path="caixa" element={<AdminFinance />} />
+                  <Route path="nuvem" element={<CloudManager />} />
                   <Route path="ajustes" element={<AdminSettings />} />
                 </Routes>
               </ProtectedRoute>
