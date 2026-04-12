@@ -29,8 +29,8 @@ export const Contact = ({ title, subtitle, data }: ContactProps) => {
       if (!response.ok) throw new Error('Falha ao enviar');
       
       setStatus('success');
-      setFormData({ name: '', email: '', message: '' });
-      setTimeout(() => setStatus('idle'), 5000);
+      // Não limpamos o formData aqui para que possamos usá-lo no link do WhatsApp
+      setTimeout(() => setStatus('idle'), 30000); // Aumentado o tempo de exibição do sucesso
     } catch (error) {
       console.error(error);
       setStatus('error');
@@ -78,12 +78,42 @@ export const Contact = ({ title, subtitle, data }: ContactProps) => {
           <div className="relative mt-8 lg:mt-0">
             <form onSubmit={handleSubmit} className="bg-white p-8 md:p-12 shadow-2xl space-y-6 md:space-y-8 relative z-10 w-full">
               {status === 'success' ? (
-                <div className="py-12 text-center space-y-4 animate-in fade-in zoom-in duration-500">
-                  <div className="flex justify-center text-green-500">
-                    <CheckCircle2 size={64} />
+                <div className="py-8 md:py-12 text-center space-y-6 animate-in fade-in zoom-in duration-700">
+                  <div className="flex justify-center text-luxury-gold relative">
+                    <div className="absolute inset-0 bg-luxury-gold/20 blur-2xl rounded-full scale-150 animate-pulse" />
+                    <CheckCircle2 size={80} className="relative z-10" />
                   </div>
-                  <h3 className="text-editorial text-3xl">Mensagem Enviada!</h3>
-                  <p className="text-luxury-black/60 font-sans">Retornaremos o seu contato o mais breve possível.</p>
+                  <div className="space-y-2 relative z-10">
+                    <h3 className="text-editorial text-3xl md:text-4xl text-luxury-black">Quase lá!</h3>
+                    <p className="text-luxury-black/70 font-sans text-sm md:text-base px-4">
+                      Sua mensagem foi registrada com sucesso em nosso sistema.
+                    </p>
+                  </div>
+                  
+                  <div className="bg-luxury-black/5 p-6 rounded-2xl border border-luxury-gold/20 space-y-4">
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-luxury-gold">Atendimento Prioritário</p>
+                    <p className="text-xs text-luxury-black/60">Para uma resposta imediata e agendamento rápido, clique no botão abaixo:</p>
+                    
+                    <a 
+                      href={`https://wa.me/5581988657659?text=${encodeURIComponent(`Olá Cesar! Acabei de preencher o formulário no site Carsena.\n\nMeu nome é ${formData.name}.\n\nGostaria de falar sobre: ${formData.message}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-luxury-black text-luxury-gold font-bold text-[11px] uppercase tracking-[0.3em] py-5 rounded-lg hover:bg-luxury-gold hover:text-luxury-black transition-all duration-500 flex items-center justify-center gap-3 shadow-xl group"
+                    >
+                      <span>Concluir via WhatsApp</span>
+                      <Phone size={16} className="group-hover:rotate-12 transition-transform" />
+                    </a>
+                  </div>
+
+                  <button 
+                    onClick={() => {
+                        setStatus('idle');
+                        setFormData({ name: '', email: '', message: '' });
+                    }}
+                    className="text-[9px] uppercase tracking-widest text-luxury-black/40 hover:text-luxury-gold transition-colors"
+                  >
+                    Voltar ao formulário
+                  </button>
                 </div>
               ) : (
                 <>

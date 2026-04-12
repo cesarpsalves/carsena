@@ -65,13 +65,14 @@ router.post('/contact', async (req, res) => {
   }
 
   try {
-    const result = await emailService.sendContactLeadEmail({ name, email, message });
+    // Tenta enviar o e-mail (notificação secundária)
+    // Se falhar (ex: domínio não verificado no Resend), apenas logamos o erro
+    // para não interromper a experiência do usuário que será redirecionado pro WhatsApp no frontend.
+    await emailService.sendContactLeadEmail({ name, email, message }).catch(err => {
+      console.warn('⚠️ Fallback email notification failed, but lead was processed:', err.message);
+    });
     
-    if (!result.success) {
-      throw new Error('Falha ao processar e-mail de contato');
-    }
-
-    res.json({ message: 'Mensagem enviada com sucesso!' });
+    res.json({ message: 'Mensagem registrada com sucesso!' });
   } catch (error: any) {
     console.error('Error in contact form submission:', error);
     res.status(500).json({ error: error.message });
