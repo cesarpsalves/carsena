@@ -6,6 +6,7 @@ export interface PortfolioImage {
   storage_path: string;
   title: string | null;
   category: string | null;
+  orientation: 'portrait' | 'landscape';
   display_order: number;
   created_at: string;
   updated_at: string;
@@ -37,7 +38,7 @@ export const portfolioService = {
    */
   async uploadImage(
     file: File,
-    meta: { title?: string; category?: string }
+    meta: { title?: string; category?: string; orientation?: 'portrait' | 'landscape' }
   ): Promise<PortfolioImage> {
     // 1. Get presigned URL from backend
     const urlRes = await fetch(`${API_URL}/storage/portfolio-upload`, {
@@ -66,6 +67,7 @@ export const portfolioService = {
         storage_path: storagePath,
         title: meta.title || null,
         category: meta.category || null,
+        orientation: meta.orientation || 'landscape',
       }),
     });
 
@@ -75,7 +77,7 @@ export const portfolioService = {
 
   async updateImage(
     id: string,
-    data: { title?: string; category?: string }
+    data: { title?: string; category?: string; orientation?: 'portrait' | 'landscape' }
   ): Promise<PortfolioImage> {
     const res = await fetch(`${API_URL}/cms/portfolio-images/${id}`, {
       method: 'PUT',

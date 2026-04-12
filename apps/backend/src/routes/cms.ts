@@ -75,7 +75,7 @@ router.get('/portfolio-images', async (req, res) => {
  * Saves a new portfolio image after upload to R2
  */
 router.post('/portfolio-images', async (req, res) => {
-  const { storage_path, title, category, display_order } = req.body;
+  const { storage_path, title, category, display_order, orientation } = req.body;
 
   if (!storage_path) {
     return res.status(400).json({ error: 'storage_path is required' });
@@ -94,7 +94,13 @@ router.post('/portfolio-images', async (req, res) => {
 
     const { data, error } = await supabase
       .from('portfolio_images')
-      .insert([{ storage_path, title, category, display_order: nextOrder }])
+      .insert([{ 
+        storage_path, 
+        title, 
+        category, 
+        display_order: nextOrder,
+        orientation: orientation || 'landscape'
+      }])
       .select()
       .single();
 
@@ -140,12 +146,12 @@ router.put('/portfolio-images/reorder', async (req, res) => {
  */
 router.put('/portfolio-images/:id', async (req, res) => {
   const { id } = req.params;
-  const { title, category } = req.body;
+  const { title, category, orientation } = req.body;
 
   try {
     const { data, error } = await supabase
       .from('portfolio_images')
-      .update({ title, category, updated_at: new Date().toISOString() })
+      .update({ title, category, orientation, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();

@@ -18,6 +18,7 @@ import { Checkout } from './pages/client/Checkout';
 import { EventCheckout } from './pages/client/EventCheckout';
 import { Toaster } from 'sonner';
 import './index.css';
+import Portfolio from './pages/Portfolio';
 
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -34,7 +35,15 @@ function App() {
                 <Home />
               </PublicLayout>
             } 
-            />
+          />
+          <Route 
+            path="/portfolio" 
+            element={
+              <PublicLayout>
+                <Portfolio />
+              </PublicLayout>
+            } 
+          />
           <Route path="/checkout" element={<EventCheckout />} />
 
           {/* Auth Routes */}

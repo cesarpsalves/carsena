@@ -94,8 +94,20 @@ export const CMSManager = () => {
     try {
       const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
       const uploads = Array.from(files).filter(f => validTypes.includes(f.type));
+      
       for (const file of uploads) {
-        const created = await portfolioService.uploadImage(file, {});
+        // Detect orientation
+        const orientation = await new Promise<'portrait' | 'landscape'>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const result = img.height > img.width ? 'portrait' : 'landscape';
+            URL.revokeObjectURL(img.src);
+            resolve(result);
+          };
+          img.src = URL.createObjectURL(file);
+        });
+
+        const created = await portfolioService.uploadImage(file, { orientation });
         setPortfolioImages(prev => [...prev, created]);
       }
     } catch (error) {
@@ -113,7 +125,7 @@ export const CMSManager = () => {
 
   const handlePortfolioMetaChange = async (
     id: string,
-    field: 'title' | 'category',
+    field: 'title' | 'category' | 'orientation',
     value: string
   ) => {
     setPortfolioImages(prev =>
@@ -122,7 +134,11 @@ export const CMSManager = () => {
   };
 
   const handlePortfolioMetaSave = async (img: PortfolioImage) => {
-    await portfolioService.updateImage(img.id, { title: img.title ?? '', category: img.category ?? '' });
+    await portfolioService.updateImage(img.id, { 
+      title: img.title ?? '', 
+      category: img.category ?? '',
+      orientation: img.orientation
+    });
   };
 
   // Drag-to-reorder handlers
@@ -443,15 +459,36 @@ export const CMSManager = () => {
                             onBlur={() => handlePortfolioMetaSave(img)}
                             className="w-full bg-transparent border-b border-white/10 py-1 text-[10px] text-luxury-cream placeholder:text-luxury-cream/20 focus:border-luxury-gold outline-none transition-colors"
                           />
-                          <input
-                            type="text"
-                            placeholder="Categoria (ex: Casamento)"
-                            value={img.category || ''}
-                            onChange={(e) => handlePortfolioMetaChange(img.id, 'category', e.target.value)}
-                            onBlur={() => handlePortfolioMetaSave(img)}
-                            className="w-full bg-transparent border-b border-white/10 py-1 text-[9px] text-luxury-gold/60 placeholder:text-luxury-cream/20 focus:border-luxury-gold outline-none transition-colors"
-                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              list="portfolio-categories"
+                              placeholder="Categoria"
+                              value={img.category || ''}
+                              onChange={(e) => handlePortfolioMetaChange(img.id, 'category', e.target.value)}
+                              onBlur={() => handlePortfolioMetaSave(img)}
+                              className="flex-1 bg-transparent border-b border-white/10 py-1 text-[9px] text-luxury-gold/60 placeholder:text-luxury-cream/20 focus:border-luxury-gold outline-none transition-colors"
+                            />
+                            <select
+                              value={img.orientation}
+                              onChange={(e) => {
+                                handlePortfolioMetaChange(img.id, 'orientation', e.target.value as any);
+                                handlePortfolioMetaSave({ ...img, orientation: e.target.value as any });
+                              }}
+                              className="bg-transparent text-[8px] text-white/40 border-none outline-none cursor-pointer hover:text-luxury-gold transition-colors"
+                            >
+                              <option value="landscape" className="bg-black text-white">Paisagem</option>
+                              <option value="portrait" className="bg-black text-white">Retrato</option>
+                            </select>
+                          </div>
                         </div>
+
+                        {/* Category Datalist */}
+                        <datalist id="portfolio-categories">
+                          {Array.from(new Set(portfolioImages.map(i => i.category).filter(Boolean))).map(cat => (
+                            <option key={cat!} value={cat!} />
+                          ))}
+                        </datalist>
                       </div>
                     ))}
                   </div>

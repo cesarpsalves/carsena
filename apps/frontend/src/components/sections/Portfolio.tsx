@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { portfolioService, getPortfolioPublicUrl } from '@/lib/portfolio';
 import type { PortfolioImage } from '@/lib/portfolio';
 
@@ -36,6 +37,7 @@ interface PortfolioPhoto {
   src: string;
   title: string;
   category: string;
+  orientation: 'portrait' | 'landscape';
 }
 
 /**
@@ -43,33 +45,17 @@ interface PortfolioPhoto {
  */
 function toPhoto(img: PortfolioImage | typeof DEFAULT_PHOTOS[number]): PortfolioPhoto {
   if ('storage_path' in img) {
+    const portfolioImg = img as PortfolioImage;
     return {
-      id: img.id,
-      src: getPortfolioPublicUrl(img.storage_path),
-      title: img.title || '',
-      category: img.category || '',
+      id: portfolioImg.id,
+      src: getPortfolioPublicUrl(portfolioImg.storage_path),
+      title: portfolioImg.title || '',
+      category: portfolioImg.category || '',
+      orientation: portfolioImg.orientation || 'landscape',
     };
   }
-  return img as PortfolioPhoto;
-}
-
-/**
- * Derives the CSS grid class for a photo based on its position (0-indexed).
- * Layout rules:
- *   Position 0 → large left  (8/12 cols on desktop)
- *   Position 1 → small right (4/12 cols on desktop)
- *   Position 2 → small left  (4/12 cols on desktop)
- *   Position 3 → large right (8/12 cols on desktop)
- *   Position 4+ → full width (12/12 cols on desktop)
- */
-function getGridClass(index: number): string {
-  const pattern = [
-    'col-span-12 md:col-span-8 h-[400px] md:h-[600px]', 
-    'col-span-12 md:col-span-4 h-[400px] md:h-[600px]', 
-    'col-span-12 md:col-span-4 h-[400px] md:h-[500px]', 
-    'col-span-12 md:col-span-8 h-[400px] md:h-[500px]'
-  ];
-  return pattern[index] ?? 'col-span-12 h-[300px] md:h-[400px]';
+  // Default photos are always landscape for simplicity
+  return { ...img, orientation: 'landscape' } as PortfolioPhoto;
 }
 
 interface PortfolioProps {
@@ -80,6 +66,7 @@ interface PortfolioProps {
 export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
   const [photos, setPhotos] = useState<PortfolioPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<string>('Todos');
 
   useEffect(() => {
     let cancelled = false;
@@ -89,8 +76,7 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
       if (images.length > 0) {
         setPhotos(images.map(toPhoto));
       } else {
-        // Fallback: show default photos while no custom portfolio is set
-        setPhotos(DEFAULT_PHOTOS);
+        setPhotos(DEFAULT_PHOTOS.map(p => ({ ...p, orientation: 'landscape' })) as PortfolioPhoto[]);
       }
       setLoading(false);
     });
@@ -98,8 +84,35 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
     return () => { cancelled = true; };
   }, []);
 
-  // Display up to 4 photos to preserve the editorial grid layout
-  const displayPhotos = photos.slice(0, 4);
+  const categories = ['Todos', ...Array.from(new Set(photos.map(p => p.category).filter(Boolean)))];
+  
+  const filteredPhotos = activeCategory === 'Todos' 
+    ? photos 
+    : photos.filter(p => p.category === activeCategory);
+
+  // Limit photos per category
+  const displayPhotos = filteredPhotos.slice(0, 6);
+
+  /**
+   * Layout Logic:
+   * Portrait images take col-span-12 md:col-span-4 and taller height.
+   * Landscape images take col-span-12 md:col-span-8 or 4 depending on position.
+   */
+  const getPhotoClass = (photo: PortfolioPhoto, index: number): string => {
+    if (photo.orientation === 'portrait') {
+      return 'col-span-12 md:col-span-4 h-[500px] md:h-[700px]';
+    }
+    
+    // Default landscape grid patterns
+    const landscapePattern = [
+      'col-span-12 md:col-span-8 h-[400px] md:h-[600px]',
+      'col-span-12 md:col-span-4 h-[400px] md:h-[600px]',
+      'col-span-12 md:col-span-4 h-[400px] md:h-[500px]',
+      'col-span-12 md:col-span-8 h-[400px] md:h-[500px]'
+    ];
+    
+    return landscapePattern[index % landscapePattern.length];
+  };
 
   return (
     <section id="portfolio" className="section-padding bg-luxury-cream">
@@ -116,22 +129,43 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
           </p>
         </div>
 
+        {/* Categories Bar */}
+        {!loading && categories.length > 1 && (
+          <div className="flex flex-wrap gap-8 mb-12 border-b border-luxury-black/5 pb-6">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`text-[10px] font-bold uppercase tracking-widest transition-all relative pb-2 ${
+                  activeCategory === category 
+                    ? 'text-luxury-black' 
+                    : 'text-luxury-black/30 hover:text-luxury-black'
+                }`}
+              >
+                {category}
+                {activeCategory === category && (
+                  <div className="absolute bottom-0 left-0 w-full h-[2px] bg-luxury-gold" />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
-          // Skeleton grid while loading to prevent layout shift
           <div className="grid grid-cols-12 gap-4 md:gap-6">
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className={`${getGridClass(i)} bg-luxury-black/5 animate-pulse`}
+                className="col-span-12 md:col-span-6 h-[400px] bg-luxury-black/5 animate-pulse"
               />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-12 gap-4 md:gap-6">
+          <div className="grid grid-cols-12 auto-rows-auto gap-4 md:gap-6">
             {displayPhotos.map((photo, index) => (
               <div
                 key={photo.id}
-                className={`${getGridClass(index)} relative group overflow-hidden bg-luxury-black/5 flex items-center justify-center`}
+                className={`${getPhotoClass(photo, index)} relative group overflow-hidden bg-luxury-black/5 flex items-center justify-center`}
               >
                 <img
                   src={photo.src}
@@ -157,9 +191,12 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
         )}
 
         <div className="mt-16 flex justify-center">
-          <button className="text-[11px] font-bold uppercase tracking-[0.2em] border-b-2 border-luxury-black pb-2 hover:text-luxury-gold hover:border-luxury-gold transition-all duration-300">
+          <Link 
+            to="/portfolio"
+            className="text-[11px] font-bold uppercase tracking-[0.2em] border-b-2 border-luxury-black pb-2 hover:text-luxury-gold hover:border-luxury-gold transition-all duration-300"
+          >
             Ver Todos os Trabalhos
-          </button>
+          </Link>
         </div>
       </div>
     </section>
