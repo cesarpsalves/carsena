@@ -39,6 +39,8 @@ import { AdminGalleryMedia } from '../../components/admin/AdminGalleryMedia';
 import { useAuth } from "../../contexts/AuthContext";
 
 import { formatCurrency } from "@/utils/format";
+import { deleteRawFiles } from "@/lib/api";
+
 
 // --- Shared UI Components ---
 
@@ -438,10 +440,37 @@ export const AdminGalleries = () => {
   const [isDeletingGalleryId, setIsDeletingGalleryId] = useState<string | null>(null);
 
   const handleDeleteGallery = async (id: string) => {
-    if (!confirm("⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL.\n\nA galeria e seus links de acesso serão excluídos IMEDIATAMENTE do banco de dados.\n\nNota: Os arquivos originais na 'Nuvem' NÃO serão apagados por segurança. Para liberar espaço, você deve apagá-los manualmente na aba 'Nuvem'.")) return;
+    if (!confirm("⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL.\n\nTudo relacionado a esta sessão (fotos, seleções e faturamento pendente) será excluído permanentemente, inclusive da Nuvem (R2).")) return;
     
     setIsDeletingGalleryId(id);
     try {
+      // 1. Buscar todas as fotos para pegar os caminhos no R2
+      const { data: photos, error: photosError } = await supabase
+        .schema('app_carsena')
+        .from('photos')
+        .select('id, storage_path')
+        .eq('gallery_id', id);
+
+      if (photosError) throw photosError;
+
+      // 2. Excluir arquivos físicos no R2
+      const pathsToDelete = (photos || [])
+        .map(p => p.storage_path)
+        .filter(p => !!p);
+      
+      if (pathsToDelete.length > 0) {
+        await deleteRawFiles(pathsToDelete);
+      }
+
+      // 3. Excluir ordens pendentes associadas para limpar o Caixa
+      await supabase
+        .schema('app_carsena')
+        .from('orders')
+        .delete()
+        .eq('gallery_id', id)
+        .eq('status', 'pending');
+
+      // 4. Excluir a galeria (as fotos devem sumir por CASCADE se configurado, senão deletamos manualmente)
       const { error } = await supabase
         .schema('app_carsena')
         .from('galleries')
@@ -450,7 +479,7 @@ export const AdminGalleries = () => {
 
       if (error) throw error;
       
-      toast.success("Galeria excluída com sucesso!");
+      toast.success("Galeria e arquivos removidos com sucesso!");
       await fetchData();
     } catch (error: any) {
       toast.error("Erro ao excluir galeria: " + error.message);
@@ -1570,21 +1599,45 @@ export const AdminTickets = () => {
   };
 
   const handleDeleteEvent = async (id: string) => {
-    if (!confirm("Excluir este evento permanentemente?")) return;
+    if (!confirm("Excluir este evento permanentemente? Todos os ingressos vendidos e imagens serão removidos.")) return;
+    
     setIsDeletingEventId(id);
     try {
+      // 1. Buscar o evento para pegar a capa no R2
+      const { data: event, error: eventError } = await supabase
+        .schema('app_carsena')
+        .from('events')
+        .select('thumbnail_url')
+        .eq('id', id)
+        .single();
+      
+      if (!eventError && event?.thumbnail_url) {
+        // Se for um link do R2 (ex: events/abc.jpg), tentamos excluir
+        // Se for uma URL completa, o deleteRawFiles deve lidar ou ignorar
+        await deleteRawFiles([event.thumbnail_url]);
+      }
+
+      // 2. Excluir ordens pendentes associadas para limpar o Caixa
+      await supabase
+        .schema('app_carsena')
+        .from('orders')
+        .delete()
+        .eq('event_id', id)
+        .eq('status', 'pending');
+
+      // 3. Excluir o evento
       const { error } = await supabase
         .schema('app_carsena')
         .from('events')
         .delete()
         .eq('id', id);
-
+        
       if (error) throw error;
       
-      toast.success("Evento removido!");
+      toast.success("Evento removido com sucesso!");
       setEvents(events.filter(e => e.id !== id));
     } catch (error: any) {
-      toast.error("Erro ao excluir evento: " + error.message);
+      toast.error("Erro ao remover evento: " + error.message);
     } finally {
       setIsDeletingEventId(null);
     }
