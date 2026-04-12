@@ -1030,49 +1030,62 @@ export const AdminGalleries = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="bg-white/5 border border-white/5 overflow-hidden"
+              className="space-y-12"
             >
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-white/5 bg-white/2">
-                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Categoria</th>
-                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30">Nome do Tipo</th>
-                    <th className="p-6 text-[9px] font-bold uppercase tracking-widest text-luxury-cream/30 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {serviceTypes.map((st) => (
-                    <tr key={st.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                      <td className="p-6">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-luxury-gold/60 px-2 py-1 bg-luxury-gold/5 border border-luxury-gold/20">
-                          {st.category}
-                        </span>
-                      </td>
-                      <td className="p-6">
-                        <p className="text-xs uppercase tracking-widest font-bold">{st.name}</p>
-                      </td>
-                      <td className="p-6 text-right">
+              <div className="flex justify-between items-center mb-4">
+                 <div>
+                    <h3 className="text-xl font-serif italic text-luxury-gold">Catálogo de Serviços</h3>
+                    <p className="text-[10px] uppercase tracking-widest text-luxury-cream/40 mt-1">Configure os tipos de trabalho que seu estúdio oferece</p>
+                 </div>
+                 <button 
+                   onClick={() => setIsServiceModalOpen(true)}
+                   className="bg-luxury-gold text-luxury-black px-6 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-all"
+                 >
+                   Adicionar Tipo
+                 </button>
+              </div>
+
+              {/* Agrupamento por Categorias */}
+              {Array.from(new Set(serviceTypes.map(s => s.category))).map(category => (
+                <div key={category} className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <h4 className="text-[11px] font-bold uppercase tracking-[0.3em] text-luxury-gold min-w-fit">{category}</h4>
+                    <div className="h-px w-full bg-gradient-to-r from-luxury-gold/20 to-transparent" />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {serviceTypes.filter(s => s.category === category).map((st) => (
+                      <div 
+                        key={st.id} 
+                        className="group bg-white/5 border border-white/5 p-4 flex justify-between items-center hover:bg-white/10 transition-all border-l-2 border-l-transparent hover:border-l-luxury-gold"
+                      >
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-white">{st.name}</p>
+                          <p className="text-[8px] text-luxury-cream/30 uppercase tracking-widest mt-1">
+                            {st.is_default ? 'Serviço Padrão' : 'Personalizado'}
+                          </p>
+                        </div>
                         <button 
-                           className="text-[9px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
+                           className="opacity-0 group-hover:opacity-100 p-2 text-red-500/40 hover:text-red-500 transition-all"
                            onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteServiceType(st.id, st.name);
                            }}
+                           title="Remover"
                         >
                            Excluir
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {serviceTypes.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="p-20 text-center text-[10px] uppercase tracking-widest text-luxury-cream/20">
-                        Nenhum tipo de serviço cadastrado
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {serviceTypes.length === 0 && (
+                <div className="py-20 text-center border border-dashed border-white/5">
+                  <p className="text-[10px] uppercase tracking-widest text-luxury-cream/20">Nenhum serviço cadastrado.</p>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
