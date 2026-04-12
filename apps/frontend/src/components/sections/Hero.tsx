@@ -11,10 +11,7 @@ interface HeroProps {
 
 export const Hero = ({ title, subtitle, imageUrl, primaryCtaLabel, secondaryCtaLabel }: HeroProps) => {
   const containerRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"]
-  });
+  const { scrollYProgress } = useScroll(); // Use global window scroll for the top-level Hero to avoid ref warnings
 
   const yBg = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);

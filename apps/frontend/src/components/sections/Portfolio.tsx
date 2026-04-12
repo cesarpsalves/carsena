@@ -132,39 +132,49 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-12 gap-4 md:gap-6">
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
             {[0, 1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
-                className="col-span-12 md:col-span-4 h-[400px] bg-luxury-black/5 animate-pulse"
+                className="w-full aspect-[4/5] bg-luxury-black/5 animate-pulse rounded-sm"
               />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-12 auto-rows-auto gap-4 md:gap-6">
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
             {displayPhotos.map((photo, index) => (
               <Link
                 key={photo.id}
                 to="/portfolio"
-                className={`${getPhotoClass(photo, index)} relative group overflow-hidden bg-luxury-black/5 flex items-center justify-center`}
+                className="relative group overflow-hidden bg-luxury-black/5 flex items-center justify-center break-inside-avoid rounded-sm shadow-sm hover:shadow-xl transition-all duration-500"
               >
                 <img
                   src={photo.src}
                   alt={photo.title || `Trabalho ${index + 1}`}
                   loading={index < 2 ? 'eager' : 'lazy'}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100"
+                  className="w-full h-auto object-cover transition-transform duration-1000 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 p-8 flex flex-col justify-end">
-                  {photo.category && (
-                    <span className="text-luxury-gold text-[10px] uppercase tracking-widest mb-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                      {photo.category}
-                    </span>
-                  )}
-                  {photo.title && (
-                    <h3 className="text-luxury-cream font-serif text-2xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
-                      {photo.title}
-                    </h3>
-                  )}
+                
+                {/* Minimalist Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/90 via-luxury-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out p-8 flex flex-col justify-end">
+                  <div className="transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
+                    {photo.category && (
+                      <span className="block text-luxury-gold text-[10px] uppercase tracking-[0.4em] mb-3">
+                        {photo.category}
+                      </span>
+                    )}
+                    {photo.title && (
+                      <h3 className="text-luxury-cream font-playfair text-2xl italic">
+                        {photo.title}
+                      </h3>
+                    )}
+                  </div>
+                  <div className="w-10 h-[1px] bg-luxury-gold/50 mt-4 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+                </div>
+
+                {/* Corner detail */}
+                <div className="absolute top-4 right-4 w-6 h-6 border border-white/10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 backdrop-blur-sm">
+                  <div className="w-0.5 h-0.5 bg-luxury-gold rounded-full" />
                 </div>
               </Link>
             ))}

@@ -88,7 +88,7 @@ export const PublicLayout: FC<PublicLayoutProps> = ({ children }) => {
   });
 
   return (
-    <div className="flex min-h-screen flex-col bg-background selection:bg-accent selection:text-foreground">
+    <div className="relative flex min-h-screen flex-col bg-background selection:bg-accent selection:text-foreground">
       {/* Header */}
       <header className="glass fixed top-0 left-0 right-0 z-50 transition-all duration-300">
         <div className="container-premium flex h-20 items-center justify-between px-6 lg:px-12">
@@ -193,7 +193,7 @@ export const PublicLayout: FC<PublicLayoutProps> = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="relative flex-1">
         {children}
       </main>
 
