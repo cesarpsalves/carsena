@@ -132,14 +132,14 @@ export const Dashboard = () => {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <Link to="/admin/eventos" className="bg-white/5 text-luxury-cream p-8 flex flex-col justify-between h-48 transition-all duration-500 group shadow-lg hover:bg-white/10">
+              <Link to="/admin/bilheteria" className="bg-white/5 text-luxury-cream p-8 flex flex-col justify-between h-48 transition-all duration-500 group shadow-lg hover:bg-white/10">
                 <div className="flex justify-between items-start">
                   <div className="p-3 border border-current opacity-20 rounded-full group-hover:opacity-40 transition-opacity">
                     <Ticket size={24} />
                   </div>
                   <ArrowUpRight size={20} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <span className="text-lg font-serif italic tracking-wide">Criar Evento</span>
+                <span className="text-lg font-serif italic tracking-wide">Criar Bilhete</span>
               </Link>
             </motion.div>
 

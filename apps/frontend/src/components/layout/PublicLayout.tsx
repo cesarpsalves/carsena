@@ -61,7 +61,11 @@ export const PublicLayout: FC<PublicLayoutProps> = ({ children }) => {
       {/* Header */}
       <header className="glass fixed top-0 left-0 right-0 z-50 transition-all duration-300">
         <div className="container-premium flex h-20 items-center justify-between px-6 lg:px-12">
-          <Link to="/" className="font-serif text-2xl font-bold tracking-[0.2em] uppercase">
+          <Link 
+            to="/" 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="font-serif text-2xl font-bold tracking-[0.2em] uppercase"
+          >
             Carsena
           </Link>
 
