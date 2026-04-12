@@ -1,5 +1,6 @@
 import { type FC, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import { 
   Home, 
   Camera, 
@@ -27,6 +28,7 @@ const navItems = [
   { icon: <Maximize size={24} />, label: "Portaria", path: "/admin/validar", description: "Validar Ingresso" },
   { icon: <Layout size={24} />, label: "Vitrine", path: "/admin/vitrine", description: "Editar Meu Site" },
   { icon: <Wallet size={24} />, label: "Caixa", path: "/admin/caixa", description: "Financeiro" },
+  { icon: <Cloud size={24} />, label: "Nuvem", path: "/admin/ajustes?tab=system", description: "Espaço R2" },
   { icon: <Settings size={24} />, label: "Ajustes", path: "/admin/ajustes", description: "Configurações" },
 ];
 
@@ -63,7 +65,6 @@ const StorageUsage = () => {
   );
 };
 
-import { useAuth } from "../../contexts/AuthContext";
 
 export const AdminSidebar: FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -116,16 +117,15 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({ isOpen, onClose }) => {
           {/* Mobile Overlay Menu Items */}
           <nav className="lg:hidden flex flex-col items-center justify-center min-h-full py-10 gap-8 px-6">
             {navItems.map((item) => (
-              <Link
+              <Link 
                 key={item.path}
                 to={item.path}
                 onClick={() => onClose()}
                 className={cn(
-                  "font-serif text-3xl tracking-tight transition-all duration-300 text-white/90 text-center flex flex-col items-center gap-2",
-                  location.pathname === item.path ? "text-luxury-gold scale-110" : "hover:text-luxury-gold"
+                  "text-3xl font-serif italic tracking-wider transition-all duration-500",
+                  location.pathname === item.path ? "text-luxury-gold scale-110" : "text-white/40 hover:text-white"
                 )}
               >
-                <span className="opacity-20">{item.icon}</span>
                 {item.label}
               </Link>
             ))}

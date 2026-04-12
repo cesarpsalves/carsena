@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   loginAsCustomer: (customerData: any) => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,6 +58,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const refreshProfile = async () => {
+    if (user?.id) {
+      await fetchProfile(user.id);
+    }
+  };
+
   const fetchProfile = async (userId: string) => {
     try {
       // Usando o schema app_carsena explicitamente (já configurado no lib/supabase.ts)
@@ -90,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, customer, profile, loading, signOut, loginAsCustomer }}>
+    <AuthContext.Provider value={{ user, customer, profile, loading, signOut, loginAsCustomer, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

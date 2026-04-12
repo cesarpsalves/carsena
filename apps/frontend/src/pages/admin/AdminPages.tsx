@@ -1,4 +1,4 @@
-import { type ReactNode, type FC, useState, useEffect } from "react";
+import React, { type ReactNode, type FC, useState, useEffect } from "react";
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { 
   Search, 
@@ -24,10 +24,12 @@ import {
   ExternalLink,
   RefreshCw,
   Eye,
-  EyeOff
+  EyeOff,
+  HelpCircle,
+  AlertTriangle
 } from "lucide-react";
 import { eventService } from "@/lib/events";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -434,9 +436,12 @@ export const AdminGalleries = () => {
     }
   };
 
+  const [isDeletingGalleryId, setIsDeletingGalleryId] = useState<string | null>(null);
+
   const handleDeleteGallery = async (id: string) => {
     if (!confirm("⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL.\n\nA galeria e seus links de acesso serão excluídos IMEDIATAMENTE do banco de dados.\n\nNota: Os arquivos originais na 'Nuvem' NÃO serão apagados por segurança. Para liberar espaço, você deve apagá-los manualmente na aba 'Nuvem'.")) return;
     
+    setIsDeletingGalleryId(id);
     try {
       const { error } = await supabase
         .schema('app_carsena')
@@ -447,9 +452,11 @@ export const AdminGalleries = () => {
       if (error) throw error;
       
       toast.success("Galeria excluída com sucesso!");
-      fetchData();
+      await fetchData();
     } catch (error: any) {
       toast.error("Erro ao excluir galeria: " + error.message);
+    } finally {
+      setIsDeletingGalleryId(null);
     }
   };
 
@@ -688,9 +695,10 @@ export const AdminGalleries = () => {
             
             <button 
                onClick={(e) => { e.stopPropagation(); handleDeleteGallery(gallery.id); }}
+               disabled={isDeletingGalleryId === gallery.id}
                className="text-red-500/30 hover:text-red-500 transition-all p-2"
             >
-              <Trash2 size={14} />
+              {isDeletingGalleryId === gallery.id ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
             </button>
           </div>
         </div>
@@ -1456,6 +1464,7 @@ export const AdminTickets = () => {
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const [courtesyData, setCourtesyData] = useState({ name: '', email: '' });
   const [batches, setBatches] = useState<any[]>([]);
+  const [isDeletingEventId, setIsDeletingEventId] = useState<string | null>(null);
   const [newBatch, setNewBatch] = useState({
     name: '',
     price: 0,
@@ -1511,16 +1520,6 @@ export const AdminTickets = () => {
     }
   };
 
-  const handleToggleStatus = async (id: string, currentStatus: string) => {
-    try {
-      await eventService.toggleStatus(id, currentStatus);
-      toast.success(currentStatus === 'open' ? "Vendas pausadas com sucesso!" : "Evento publicado com sucesso!");
-      fetchEvents();
-    } catch (error) {
-      toast.error("Erro ao alterar status.");
-    }
-  };
-
   const fetchBatches = async (eventId: string) => {
     try {
       const { data, error } = await supabase
@@ -1572,8 +1571,8 @@ export const AdminTickets = () => {
   };
 
   const handleDeleteEvent = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este evento e todos os ingressos relacionados?")) return;
-    
+    if (!confirm("Excluir este evento permanentemente?")) return;
+    setIsDeletingEventId(id);
     try {
       const { error } = await supabase
         .schema('app_carsena')
@@ -1587,6 +1586,8 @@ export const AdminTickets = () => {
       setEvents(events.filter(e => e.id !== id));
     } catch (error: any) {
       toast.error("Erro ao excluir evento: " + error.message);
+    } finally {
+      setIsDeletingEventId(null);
     }
   };
 
@@ -1766,15 +1767,23 @@ export const AdminTickets = () => {
           </span>
         </div>
 
-        <div className="absolute top-4 right-4 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
             <button 
-            onClick={() => handleToggleStatus(event.id, event.status)}
-            className="p-2 bg-black/60 backdrop-blur-md border border-white/10 text-white hover:text-luxury-gold transition-colors rounded-lg"
-            title={event.status === 'open' ? "Pausar Vendas" : "Publicar na Vitrine"}
-          >
-            {event.status === 'open' ? <EyeOff size={14} /> : <Eye size={14} />}
-          </button>
-        </div>
+              onClick={(e) => { e.stopPropagation(); navigate(`/admin/bilheteria?id=${event.id}`); }}
+              className="p-2 bg-black/40 backdrop-blur-md border border-white/10 text-white hover:bg-luxury-gold hover:text-black transition-all rounded-full"
+              title="Configurar"
+            >
+              <Settings size={16} />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); handleDeleteEvent(event.id); }}
+              disabled={isDeletingEventId === event.id}
+              className="p-2 bg-black/40 backdrop-blur-md border border-red-500/40 text-red-500 hover:bg-red-600 hover:text-white transition-all rounded-full"
+              title="Excluir Evento"
+            >
+              {isDeletingEventId === event.id ? <RefreshCw size={16} className="animate-spin" /> : <Trash2 size={16} />}
+            </button>
+          </div>
 
         <div className="aspect-[21/9] bg-black relative overflow-hidden">
           {event.thumbnail_url ? (
@@ -2351,9 +2360,6 @@ export const AdminFinance = () => {
   );
 };
 
-// Import removed from here - already handled via supabase if possible or moved to shared
-
-
 const AdminTeam = () => {
   const [photographers, setPhotographers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2363,22 +2369,20 @@ const AdminTeam = () => {
   const [editingAdmin, setEditingAdmin] = useState<any>(null);
 
   useEffect(() => {
-    fetchAdmins();
+    fetchPhotographers();
   }, []);
 
-  const fetchAdmins = async () => {
-    setLoading(true);
+  const fetchPhotographers = async () => {
     try {
       const { data, error } = await supabase
         .schema('app_carsena')
         .from('photographers')
         .select('*')
         .order('name');
-      
       if (error) throw error;
       setPhotographers(data || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar administradores: " + error.message);
+      toast.error("Erro ao carregar equipe: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -2405,7 +2409,7 @@ const AdminTeam = () => {
       toast.success("Membro da equipe criado com sucesso!");
       setIsModalOpen(false);
       setNewAdmin({ name: '', email: '', password: '', user_type: 'staff' });
-      fetchAdmins();
+      fetchPhotographers();
     } catch (error: any) {
       toast.error("Erro ao criar membro: " + error.message);
     } finally {
@@ -2434,7 +2438,7 @@ const AdminTeam = () => {
       
       toast.success("Dados do administrador atualizados com sucesso.");
       setIsEditModalOpen(false);
-      fetchAdmins();
+      fetchPhotographers();
     } catch (error: any) {
       toast.error("Erro ao atualizar: " + error.message);
     } finally {
@@ -2454,7 +2458,7 @@ const AdminTeam = () => {
         if (!response.ok) throw new Error(data.error || "Falha ao remover acesso");
         
         toast.success("Acesso removido com sucesso.");
-        fetchAdmins();
+        fetchPhotographers();
       } catch (error: any) {
         toast.error("Erro ao remover: " + error.message);
       } finally {
@@ -2464,7 +2468,53 @@ const AdminTeam = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-12 animate-in fade-in duration-500">
+      {/* Guia Didático */}
+      <section className="bg-white/[0.02] border border-white/5 p-8 lg:p-12 space-y-8">
+        <div className="flex items-center gap-4 text-luxury-gold">
+          <div className="w-12 h-12 rounded-full bg-luxury-gold/10 flex items-center justify-center">
+            <HelpCircle size={24} />
+          </div>
+          <div>
+            <h3 className="text-xl font-light text-editorial text-white">Guia de Gestão</h3>
+            <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] font-bold">Entenda a hierarquia do seu sistema</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-white/60">
+              <span className="w-6 h-6 rounded-full border border-white/10 flex items-center justify-center text-[10px]">1</span>
+              <p className="text-[10px] font-bold uppercase tracking-widest">Equipe (Staff)</p>
+            </div>
+            <p className="text-[11px] text-white/30 leading-relaxed italic">
+              "Gestores Master" têm controle total. "Equipe" apenas gerencia as sessões que você delegar a eles.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-white/60">
+              <span className="w-6 h-6 rounded-full border border-white/10 flex items-center justify-center text-[10px]">2</span>
+              <p className="text-[10px] font-bold uppercase tracking-widest">Clientes & Eventos</p>
+            </div>
+            <p className="text-[11px] text-white/30 leading-relaxed italic">
+              Cada trabalho é uma "Sessão" no Estúdio. Vincule um cliente para que ele possa escolher e comprar fotos.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-white/60">
+              <span className="w-6 h-6 rounded-full border border-white/10 flex items-center justify-center text-[10px]">3</span>
+              <p className="text-[10px] font-bold uppercase tracking-widest">Entrega & Venda</p>
+            </div>
+            <p className="text-[11px] text-white/30 leading-relaxed italic">
+              Seu lucro vai para o "Caixa". O app cuida do envio de ingressos e seleção de fotos automaticamente.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold">Equipe Carsena</h3>
         <button 
@@ -2523,6 +2573,7 @@ const AdminTeam = () => {
             </div>
           </div>
         ))}
+        </div>
       </div>
 
       {/* Modal Novo */}
@@ -2618,9 +2669,18 @@ const AdminTeam = () => {
 };
 
 export const AdminSettings = () => {
-  const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'system'>('profile');
-  
+  const { profile, refreshProfile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') as 'profile' | 'team' | 'system' || 'profile';
+  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'system' | 'reset'>(initialTab);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && (tab === 'profile' || tab === 'team' || tab === 'system' || tab === 'reset')) {
+      setActiveTab(tab as any);
+    }
+  }, [searchParams]);
+
   // Profile State
   const [name, setName] = useState(profile?.name || '');
   const [email, setEmail] = useState(profile?.email || '');
@@ -2630,6 +2690,7 @@ export const AdminSettings = () => {
   // Security State
   const [newPassword, setNewPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // System Settings State
   const [systemSettings, setSystemSettings] = useState({
@@ -2726,14 +2787,48 @@ export const AdminSettings = () => {
       if (email !== profile.email) {
         const { error: authError } = await supabase.auth.updateUser({ email });
         if (authError) throw authError;
-        toast.success("Perfil e E-mail atualizados! Verifique sua nova caixa de entrada para confirmar.");
+        toast.info("Perfil atualizado! Uma confirmação foi enviada para " + email + ". O e-mail só será alterado após sua confirmação.", { duration: 8000 });
       } else {
         toast.success("Perfil atualizado com sucesso!");
       }
+
+      await refreshProfile();
     } catch (error: any) {
       toast.error("Erro ao atualizar perfil: " + error.message);
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const handleResetEnvironment = async () => {
+    if (!confirm("⚠️ ATENÇÃO: Esta ação irá apagar TODAS as galerias, clientes, pedidos e ingressos de teste. Esta operação NÃO pode ser desfeita. Deseja prosseguir com a limpeza para entrega final?")) return;
+    
+    setIsResetting(true);
+    try {
+      // 1. Limpar Ingressos e Lotes
+      await supabase.schema('app_carsena').from('tickets').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.schema('app_carsena').from('ticket_tiers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      // 2. Limpar Pedidos e Financeiro
+      await supabase.schema('app_carsena').from('order_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.schema('app_carsena').from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.schema('app_carsena').from('payment_webhooks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      // 3. Limpar Galerias e Fotos
+      await supabase.schema('app_carsena').from('photo_access').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.schema('app_carsena').from('photo_selections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.schema('app_carsena').from('photos').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.schema('app_carsena').from('galleries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.schema('app_carsena').from('portfolio_images').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      // 4. Limpar Clientes (não administradores)
+      await supabase.schema('app_carsena').from('customers').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      toast.success("Ambiente resetado com sucesso! O app está pronto para uso real.");
+    } catch (error: any) {
+      toast.error("Erro ao resetar: " + error.message);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -2767,7 +2862,7 @@ export const AdminSettings = () => {
         {/* Navigation Sidebar */}
         <nav className="w-full lg:w-64 space-y-2 lg:sticky lg:top-32">
           <button 
-            onClick={() => setActiveTab('profile')}
+            onClick={() => { setActiveTab('profile'); setSearchParams({ tab: 'profile' }); }}
             className={cn(
               "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
               activeTab === 'profile' ? "bg-luxury-gold text-black border-luxury-gold shadow-lg" : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
@@ -2779,7 +2874,7 @@ export const AdminSettings = () => {
           {isMaster && (
             <>
               <button 
-                onClick={() => setActiveTab('team')}
+                onClick={() => { setActiveTab('team'); setSearchParams({ tab: 'team' }); }}
                 className={cn(
                   "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
                   activeTab === 'team' ? "bg-luxury-gold text-black border-luxury-gold shadow-lg" : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
@@ -2788,13 +2883,22 @@ export const AdminSettings = () => {
                 <Users size={16} /> Equipe e Acessos
               </button>
               <button 
-                onClick={() => setActiveTab('system')}
+                onClick={() => { setActiveTab('system'); setSearchParams({ tab: 'system' }); }}
                 className={cn(
                   "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
                   activeTab === 'system' ? "bg-luxury-gold text-black border-luxury-gold shadow-lg" : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
                 )}
               >
-                <Globe size={16} /> Sistema e Integrações
+                <Globe size={16} /> Sistema e Nuvem
+              </button>
+              <button 
+                onClick={() => { setActiveTab('reset'); setSearchParams({ tab: 'reset' }); }}
+                className={cn(
+                  "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
+                  activeTab === 'reset' ? "bg-red-600 text-white border-red-600 shadow-lg" : "bg-red-500/5 text-red-500/40 border-red-500/5 hover:bg-red-500/10 hover:text-red-500"
+                )}
+              >
+                <Trash2 size={16} /> Limpar App (Reset)
               </button>
             </>
           )}
@@ -2978,6 +3082,46 @@ export const AdminSettings = () => {
                 )}
               </motion.div>
             )}
+
+            {activeTab === 'reset' && isMaster && (
+                  <motion.div 
+                    key="tab-reset" 
+                    initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                    className="space-y-8"
+                  >
+                    <section className="bg-red-500/5 border border-red-500/10 p-8 lg:p-12 space-y-8">
+                       <div className="flex items-center gap-4 text-red-500 mb-6">
+                        <AlertTriangle size={32} />
+                        <div>
+                          <h3 className="text-2xl font-light text-editorial text-white">Limpeza para Entrega</h3>
+                          <p className="text-[10px] text-red-500/60 uppercase tracking-widest font-bold">Ação Irreversível</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6 text-sm text-white/40 leading-relaxed uppercase tracking-widest text-[10px]">
+                        <p>Esta função foi criada para que você possa limpar todos os dados de teste gerados durante o desenvolvimento e entregar o app "zerado" para o seu cliente.</p>
+                        <ul className="list-disc list-inside space-y-2 text-red-500/40">
+                          <li>Remove todas as Galerias e Sessões</li>
+                          <li>Remove todos os Clientes (exceto equipe)</li>
+                          <li>Remove todos os Ingressos e Lotes</li>
+                          <li>Limpa o histórico financeiro e pedidos</li>
+                          <li>MANTÉM as chaves da Nuvem e Financeiras</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="pt-6">
+                        <button 
+                          onClick={handleResetEnvironment}
+                          disabled={isResetting}
+                          className="w-full py-6 bg-red-600 text-white text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-red-500 transition-all shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
+                        >
+                          {isResetting ? <RefreshCw className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                          {isResetting ? 'Limpando Ambiente...' : 'Confirmar Limpeza Total'}
+                        </button>
+                      </div>
+                    </section>
+                  </motion.div>
+                )}
           </AnimatePresence>
         </div>
       </div>
