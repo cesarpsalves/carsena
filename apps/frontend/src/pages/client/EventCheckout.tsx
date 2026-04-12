@@ -70,11 +70,21 @@ export const EventCheckout = () => {
     }
   }, [event, tier, navigate]);
 
+  const basePrice = Number(tier.price || 0);
+  const fee = paymentMethod === 'CREDIT_CARD' ? basePrice * 0.05 : 0;
+  const totalPrice = basePrice + fee;
+
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!customerName || !customerEmail || !customerDocument) {
       toast.error("Preencha todos os campos para continuar.");
+      return;
+    }
+
+    // Validação de valor mínimo (Asaas limitation)
+    if (totalPrice < 20) {
+      toast.error(`O valor mínimo para pagamento é R$ 20,00. O valor atual é R$ ${totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
       return;
     }
 
@@ -98,9 +108,9 @@ export const EventCheckout = () => {
             {
               item_id: tier.id,
               item_type: 'ticket',
-              unit_price: tier.price,
+              unit_price: basePrice,
               quantity: 1,
-              name: `Ingresso: ${tier.name}`
+              name: `Ingresso: ${tier.name}${paymentMethod === 'CREDIT_CARD' ? ' (+Taxa)' : ''}`
             }
           ]
         })
@@ -181,12 +191,37 @@ export const EventCheckout = () => {
                    <p className="text-[10px] text-luxury-black/40 uppercase tracking-widest">{tier.name}</p>
                    <p className="text-xl font-light">1x</p>
                 </div>
+                
+                <div className="space-y-4 border-b border-luxury-black/5 pb-8">
+                   <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-luxury-black/60">
+                      <span>Valor do Ingresso</span>
+                      <span>R$ {tier.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                   </div>
+                   {paymentMethod === 'CREDIT_CARD' && (
+                     <motion.div 
+                       initial={{ opacity: 0, x: -10 }}
+                       animate={{ opacity: 1, x: 0 }}
+                       className="flex justify-between items-center text-[10px] uppercase tracking-widest text-luxury-gold font-bold"
+                     >
+                        <span>Taxa de Processamento (5%)</span>
+                        <span>+ R$ {(tier.price * 0.05).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                     </motion.div>
+                   )}
+                </div>
+
                 <div className="flex justify-between items-end pt-4">
                    <div className="space-y-1">
-                      <p className="text-[10px] text-luxury-gold uppercase tracking-[0.3em] font-black">Total a Pagar</p>
-                      <p className="text-[9px] text-luxury-black/40 uppercase tracking-widest">Via PIX</p>
+                      <p className="text-[10px] text-luxury-gold uppercase tracking-[0.3em] font-black">Total Final</p>
+                      <p className="text-[9px] text-luxury-black/40 uppercase tracking-widest">Pagamento via {paymentMethod === 'PIX' ? 'PIX' : 'Cartão'}</p>
                    </div>
-                   <p className="text-4xl font-serif text-luxury-gold">R$ {Number(tier.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                   <motion.p 
+                     key={paymentMethod}
+                     initial={{ scale: 0.9, opacity: 0 }}
+                     animate={{ scale: 1, opacity: 1 }}
+                     className="text-4xl font-serif text-luxury-gold"
+                   >
+                     R$ {totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                   </motion.p>
                 </div>
              </div>
 

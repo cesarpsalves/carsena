@@ -170,6 +170,62 @@ router.post("/photographers", async (req, res) => {
 });
 
 /**
+ * PATCH /api/admin/photographers/:id
+ * Updates an administrator details.
+ */
+router.patch("/photographers/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, email, user_type, password } = req.body;
+
+  try {
+    // 1. Get current data to find auth_id
+    const { data: current, error: fetchError } = await supabase
+      .from('photographers')
+      .select('auth_id, email')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // 2. Update Auth if needed (email or password)
+    if (current.auth_id) {
+      const updateData: any = {};
+      if (email && email !== current.email) updateData.email = email;
+      if (password) updateData.password = password;
+      if (name) updateData.user_metadata = { name };
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: authError } = await supabase.auth.admin.updateUserById(
+          current.auth_id,
+          updateData
+        );
+        if (authError) throw authError;
+      }
+    }
+
+    // 3. Update professionals table
+    const updatePayload: any = { updated_at: new Date().toISOString() };
+    if (name) updatePayload.name = name;
+    if (email) updatePayload.email = email;
+    if (user_type) updatePayload.user_type = user_type;
+
+    const { data: updated, error: dbError } = await supabase
+      .from('photographers')
+      .update(updatePayload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    res.json(updated);
+  } catch (error: any) {
+    console.error("❌ Error updating photographer:", error);
+    res.status(500).json({ error: error.message || "Failed to update photographer" });
+  }
+});
+
+/**
  * DELETE /api/admin/photographers/:id
  * Removes an administrator.
  */

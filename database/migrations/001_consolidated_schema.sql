@@ -2,7 +2,7 @@
 -- Objective: Centralize everything in app_carsena and provide a clean foundation.
 
 CREATE SCHEMA IF NOT EXISTS app_carsena;
-SET search_path TO app_carsena, public;
+SET search_path TO app_carsena;
 
 -- 1. Helper: Updated At Trigger
 CREATE OR REPLACE FUNCTION set_updated_at()

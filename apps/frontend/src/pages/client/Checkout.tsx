@@ -96,6 +96,11 @@ export const Checkout = () => {
       return;
     }
 
+    if (balanceToPay < 20) {
+      toast.error(`O valor mínimo para cobrança é R$ 20,00. Seu saldo atual é de R$ ${balanceToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
+      return;
+    }
+
     try {
       setVerifying(true);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/payments/checkout`, {
@@ -171,38 +176,47 @@ export const Checkout = () => {
                <span className="text-[10px] text-[#d4af37] font-bold uppercase tracking-[0.4em]">Resumo do Pedido</span>
                <h2 className="text-5xl font-light leading-tight">{gallery.title}</h2>
                <div className="w-12 h-px bg-[#d4af37]" />
-             </div>
+               <div className="bg-white/[0.02] border border-white/5 p-10 rounded-3xl space-y-8">
+                 <div className="space-y-4 border-b border-white/5 pb-8">
+                    <div className="flex justify-between items-end">
+                       <p className="text-[10px] text-white/40 uppercase tracking-widest">Valor Original</p>
+                       <p className="text-xl font-light">R$ {Number(gallery.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    {Number(gallery.amount_paid) > 0 && (
+                      <div className="flex justify-between items-end">
+                         <p className="text-[10px] text-emerald-500/60 uppercase tracking-widest font-bold">Saldo Já Pago</p>
+                         <p className="text-xl text-emerald-500 font-light">- R$ {Number(gallery.amount_paid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      </div>
+                    )}
+                    {paymentMethod === 'CREDIT_CARD' && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex justify-between items-center text-[10px] uppercase tracking-widest text-[#d4af37] font-bold"
+                      >
+                         <span>Taxa Cartão (Asaas 5%)</span>
+                         <span>+ R$ {fee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      </motion.div>
+                    )}
+                 </div>
 
-             <div className="bg-white/[0.02] border border-white/5 p-10 rounded-3xl space-y-8">
-                <div className="flex justify-between items-end">
-                   <p className="text-[10px] text-white/40 uppercase tracking-widest">Valor do Pacote</p>
-                   <p className="text-xl font-light">R$ {Number(gallery.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
-                <div className="flex justify-between items-end border-b border-white/5 pb-8">
-                   <p className="text-[10px] text-emerald-500/60 uppercase tracking-widest font-bold">Saldo Já Pago</p>
-                   <p className="text-xl text-emerald-500 font-light">- R$ {Number(gallery.amount_paid).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
-
-                {fee > 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex justify-between items-end text-[#d4af37]/60"
-                  >
-                     <p className="text-[10px] uppercase tracking-widest font-bold">Taxa de Cartão (5%)</p>
-                     <p className="text-xl font-light">+ R$ {fee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  </motion.div>
-                )}
-
-                <div className="flex justify-between items-end pt-4">
-                   <div className="space-y-1">
-                      <p className="text-[10px] text-[#d4af37] uppercase tracking-[0.3em] font-black">Restante à Pagar</p>
-                      <p className="text-[9px] text-white/20 uppercase tracking-widest">
-                        {paymentMethod === 'PIX' ? "Liberação Instantânea" : "Processamento Seguro"}
-                      </p>
-                   </div>
-                   <p className="text-4xl font-serif text-[#d4af37]">R$ {balanceToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                </div>
+                 <div className="flex justify-between items-end pt-4">
+                    <div className="space-y-1">
+                       <p className="text-[10px] text-[#d4af37] uppercase tracking-[0.3em] font-black">Restante à Pagar</p>
+                       <p className="text-[9px] text-white/20 uppercase tracking-widest">
+                         Pagamento via {paymentMethod === 'PIX' ? 'PIX Instantâneo' : 'Cartão de Crédito'}
+                       </p>
+                    </div>
+                    <motion.p 
+                      key={paymentMethod}
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-4xl font-serif text-[#d4af37]"
+                    >
+                      R$ {balanceToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </motion.p>
+                 </div>
+              </div>
              </div>
 
              <div className="flex items-center gap-4 text-white/20">

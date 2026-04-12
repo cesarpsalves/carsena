@@ -94,7 +94,9 @@ router.post('/checkout', async (req, res) => {
       final_total = Number((total_amount * 1.05).toFixed(2));
     }
 
-    if (final_total <= 0) throw new Error('Valor inválido para pagamento');
+    if (final_total < 20) {
+      throw new Error('O valor total da cobrança (incluindo taxas) deve ser de no mínimo R$ 20,00 para prosseguir com o pagamento.');
+    }
 
     // 5. Create Order
     const { data: order, error: orderError } = await supabase

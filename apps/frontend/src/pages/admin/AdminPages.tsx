@@ -11,7 +11,6 @@ import {
   Users,
   Ticket,
   CreditCard,
-  Cloud,
   Save,
   Clock,
   Trash2,
@@ -36,6 +35,7 @@ import { toast } from 'sonner';
 import { getStoragePublicUrl, uploadDirect } from '@/lib/storage';
 import { UploadZone } from '../../components/admin/UploadZone';
 import { AdminGalleryMedia } from '../../components/admin/AdminGalleryMedia';
+import { useAuth } from "../../contexts/AuthContext";
 
 import { formatCurrency } from "@/utils/format";
 
@@ -91,7 +91,7 @@ const Modal: React.FC<{ isOpen: boolean; onClose: () => void; title: string; chi
 
 interface FormInputProps {
   label: string;
-  placeholder: string;
+  placeholder?: string;
   icon?: ReactNode;
   type?: string;
   value?: string;
@@ -2357,7 +2357,9 @@ const AdminTeam = () => {
   const [photographers, setPhotographers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '' });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({ name: '', email: '', password: '', user_type: 'admin' });
+  const [editingAdmin, setEditingAdmin] = useState<any>(null);
 
   useEffect(() => {
     fetchAdmins();
@@ -2383,41 +2385,79 @@ const AdminTeam = () => {
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newAdmin.password || newAdmin.password.length < 6) {
+      toast.error("Defina uma senha de pelo menos 6 caracteres para o novo membro.");
+      return;
+    }
+
     try {
-      const { error } = await supabase
-        .schema('app_carsena')
-        .from('photographers')
-        .insert([{
-          ...newAdmin,
-          id: crypto.randomUUID()
-        }]);
+      setLoading(true);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/photographers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAdmin)
+      });
       
-      if (error) throw error;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Falha ao criar administrador");
       
-      toast.success("Administrador criado com sucesso!");
+      toast.success("Membro da equipe criado com sucesso!");
       setIsModalOpen(false);
-      setNewAdmin({ name: '', email: '', password: '' });
+      setNewAdmin({ name: '', email: '', password: '', user_type: 'staff' });
       fetchAdmins();
     } catch (error: any) {
-      toast.error("Erro ao criar administrador: " + error.message);
+      toast.error("Erro ao criar membro: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAdmin) return;
+    
+    try {
+      setLoading(true);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/photographers/${editingAdmin.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingAdmin.name,
+          email: editingAdmin.email,
+          user_type: editingAdmin.user_type
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Falha ao atualizar administradores");
+      
+      toast.success("Dados do administrador atualizados com sucesso.");
+      setIsEditModalOpen(false);
+      fetchAdmins();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Remover acesso de ${name}?`)) {
+    if (confirm(`Remover permanentemente o acesso de ${name}? Esta ação não pode ser desfeita.`)) {
       try {
-        const { error } = await supabase
-          .schema('app_carsena')
-          .from('photographers')
-          .delete()
-          .eq('id', id);
+        setLoading(true);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/photographers/${id}`, {
+          method: 'DELETE'
+        });
         
-        if (error) throw error;
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Falha ao remover acesso");
         
-        toast.success("Acesso removido.");
+        toast.success("Acesso removido com sucesso.");
         fetchAdmins();
       } catch (error: any) {
-        toast.error("Erro ao remover acesso: " + error.message);
+        toast.error("Erro ao remover: " + error.message);
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -2437,148 +2477,382 @@ const AdminTeam = () => {
       <div className="grid grid-cols-1 gap-4">
         {loading ? (
           <div className="p-12 text-center text-white/20 text-[10px] uppercase tracking-widest">Carregando membros...</div>
+        ) : photographers.length === 0 ? (
+          <div className="p-12 bg-black/20 border border-white/5 text-center text-luxury-cream/20 text-[10px] uppercase tracking-widest">Nenhum membro na equipe</div>
         ) : photographers.map(p => (
           <div key={p.id} className="p-6 bg-black/40 border border-white/5 flex items-center justify-between group hover:border-luxury-gold/20 transition-all">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white/5 flex items-center justify-center text-luxury-cream/40 font-serif italic text-xl">
-                {p.name.charAt(0)}
+              <div className="relative">
+                <div className="w-12 h-12 bg-white/5 flex items-center justify-center text-luxury-cream/40 font-serif italic text-xl border border-white/10 group-hover:border-luxury-gold/30 transition-colors">
+                  {p.name.charAt(0)}
+                </div>
+                {!p.auth_id && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full border-2 border-luxury-black animate-pulse" title="Convite Pendente" />
+                )}
               </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-luxury-cream">{p.name}</p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-luxury-cream">{p.name}</p>
+                  <span className={cn(
+                    "text-[8px] px-1.5 py-0.5 rounded-sm font-bold tracking-tighter uppercase",
+                    p.user_type === 'admin' ? "bg-luxury-gold/20 text-luxury-gold" : "bg-white/10 text-white/40"
+                  )}>
+                    {p.user_type === 'admin' ? 'Gestor' : 'Equipe'}
+                  </span>
+                </div>
                 <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest">{p.email}</p>
               </div>
             </div>
-            <button 
-              onClick={() => handleDelete(p.id, p.name)}
-              className="p-2 text-white/10 hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
-            >
-              <Trash2 size={14} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => {
+                  setEditingAdmin(p);
+                  setIsEditModalOpen(true);
+                }}
+                className="p-2 text-white/10 hover:text-luxury-gold transition-all opacity-0 group-hover:opacity-100"
+              >
+                <Settings size={14} />
+              </button>
+              <button 
+                onClick={() => handleDelete(p.id, p.name)}
+                className="p-2 text-white/10 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
+      {/* Modal Novo */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Novo Administrador">
         <form onSubmit={handleAddAdmin} className="space-y-6">
-          <FormInput 
-            label="Nome Completo" 
-            placeholder="Nome Sobrenome" 
-            value={newAdmin.name} 
-            onChange={(val) => setNewAdmin({...newAdmin, name: val})}
-            required 
-          />
-          <FormInput 
-            label="E-mail de Acesso" 
-            placeholder="exemplo@email.com" 
-            type="email"
-            value={newAdmin.email}
-            onChange={(val) => setNewAdmin({...newAdmin, email: val})}
-            required 
-          />
-          <FormInput 
-            label="Senha Provisória" 
-            placeholder="••••••••" 
-            type="password"
-            value={newAdmin.password}
-            onChange={(val) => setNewAdmin({...newAdmin, password: val})}
-            required 
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <FormInput 
+                label="Nome Completo" 
+                placeholder="Nome do Membro" 
+                value={newAdmin.name} 
+                onChange={(val) => setNewAdmin({...newAdmin, name: val})}
+                required 
+              />
+            </div>
+            <FormInput 
+              label="E-mail de Acesso" 
+              placeholder="exemplo@email.com" 
+              type="email"
+              value={newAdmin.email}
+              onChange={(val) => setNewAdmin({...newAdmin, email: val})}
+              required 
+            />
+             <FormInput 
+              label="Senha Inicial" 
+              placeholder="Mínimo 6 chars" 
+              type="password"
+              value={newAdmin.password}
+              onChange={(val) => setNewAdmin({...newAdmin, password: val})}
+              required 
+            />
+            <div className="col-span-2 space-y-2">
+              <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold">Título / Nível de Acesso</label>
+              <select 
+                value={newAdmin.user_type}
+                onChange={(e) => setNewAdmin({...newAdmin, user_type: e.target.value})}
+                className="w-full bg-white/5 border border-white/5 px-4 py-4 text-[10px] text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
+              >
+                <option value="admin">Gestor Master (Acesso Total)</option>
+                <option value="staff">Fotógrafo / Suporte (Acesso Limitado)</option>
+              </select>
+              <p className="text-[8px] text-white/20 uppercase tracking-[0.2em] leading-relaxed italic">
+                * Gestores Master possuem controle total sobre faturamento, equipe e integrações do sistema.
+              </p>
+            </div>
+          </div>
           <div className="pt-4">
             <button type="submit" className="w-full py-5 bg-luxury-gold text-black text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-white transition-all shadow-xl">
-              Confirmar Cadastro
+              Configurar Acesso Profissional
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Editar */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Editar Perfil de Equipe">
+        {editingAdmin && (
+          <form onSubmit={handleUpdateAdmin} className="space-y-6">
+            <FormInput 
+              label="Nome ou Apelido" 
+              value={editingAdmin.name} 
+              onChange={(val) => setEditingAdmin({...editingAdmin, name: val})}
+              required 
+            />
+            <FormInput 
+              label="E-mail Corporativo" 
+              type="email"
+              value={editingAdmin.email}
+              onChange={(val) => setEditingAdmin({...editingAdmin, email: val})}
+              required 
+            />
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold">Cargo / Permissão</label>
+              <select 
+                value={editingAdmin.user_type}
+                onChange={(e) => setEditingAdmin({...editingAdmin, user_type: e.target.value})}
+                className="w-full bg-white/5 border border-white/5 px-4 py-4 text-[10px] text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
+              >
+                <option value="admin">Gestor Master (Total)</option>
+                <option value="staff">Fotógrafo / Suporte (Limitado)</option>
+              </select>
+            </div>
+            <div className="pt-4">
+              <button type="submit" className="w-full py-5 bg-luxury-gold text-black text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-white transition-all shadow-xl">
+                Salvar Alterações
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );
 };
 
 export const AdminSettings = () => {
-  const [activeConfig, setActiveConfig] = useState<null | 'asaas' | 'r2' | 'team'>(null);
+  const { profile } = useAuth();
+  const [activeTab, setActiveTab] = useState<'profile' | 'team' | 'system'>('profile');
+  
+  // Profile State
+  const [name, setName] = useState(profile?.name || '');
+  const [email, setEmail] = useState(profile?.email || '');
+  const [bio, setBio] = useState(profile?.bio || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Security State
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setEmail(profile.email || '');
+      setBio(profile.bio || '');
+    }
+  }, [profile]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.id) return;
+    
+    setIsSavingProfile(true);
+    try {
+      const { error: dbError } = await supabase
+        .schema('app_carsena')
+        .from('photographers')
+        .update({ name, email, bio, updated_at: new Date().toISOString() })
+        .eq('id', profile.id);
+
+      if (dbError) throw dbError;
+
+      if (email !== profile.email) {
+        const { error: authError } = await supabase.auth.updateUser({ email });
+        if (authError) throw authError;
+        toast.success("Perfil e E-mail atualizados! Verifique sua nova caixa de entrada para confirmar.");
+      } else {
+        toast.success("Perfil atualizado com sucesso!");
+      }
+    } catch (error: any) {
+      toast.error("Erro ao atualizar perfil: " + error.message);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Senha alterada com sucesso!");
+      setNewPassword('');
+    } catch (error: any) {
+      toast.error("Erro ao alterar senha: " + error.message);
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const isMaster = profile?.user_type === 'admin';
 
   return (
     <AdminLayout>
-      <PageHeader title="Ajustes" subtitle="Configurações da conta, integrações e perfil" />
-      <div className="max-w-2xl space-y-12 mb-20">
-        <section className="space-y-6">
-          <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold">Integrações</h3>
-          <div className="space-y-4">
-             {/* Asaas */}
-            <div className={cn(
-              "p-6 bg-black/40 border transition-all duration-500",
-              activeConfig === 'asaas' ? "border-luxury-gold/50" : "border-white/5"
-            )}>
-              <div className="flex items-center justify-between mb-6">
-                 <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 bg-white/5 flex items-center justify-center text-luxury-gold font-bold text-center pt-1 italic font-serif">A</div>
-                   <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest">Asaas (Pagamentos)</p>
-                      <p className="text-[9px] text-green-500 uppercase tracking-widest">Conectado</p>
+      <PageHeader title="Ajustes" subtitle="Configurações da conta, segurança e equipe" />
+      
+      <div className="flex flex-col lg:flex-row gap-12 mb-32 items-start">
+        {/* Navigation Sidebar */}
+        <nav className="w-full lg:w-64 space-y-2 lg:sticky lg:top-32">
+          <button 
+            onClick={() => setActiveTab('profile')}
+            className={cn(
+              "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
+              activeTab === 'profile' ? "bg-luxury-gold text-black border-luxury-gold shadow-lg" : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            <User size={16} /> Minha Conta
+          </button>
+          
+          {isMaster && (
+            <>
+              <button 
+                onClick={() => setActiveTab('team')}
+                className={cn(
+                  "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
+                  activeTab === 'team' ? "bg-luxury-gold text-black border-luxury-gold shadow-lg" : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
+                )}
+              >
+                <Users size={16} /> Equipe e Acessos
+              </button>
+              <button 
+                onClick={() => setActiveTab('system')}
+                className={cn(
+                  "w-full flex items-center gap-4 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-all border",
+                  activeTab === 'system' ? "bg-luxury-gold text-black border-luxury-gold shadow-lg" : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10 hover:text-white"
+                )}
+              >
+                <Globe size={16} /> Sistema e Integrações
+              </button>
+            </>
+          )}
+        </nav>
+
+        {/* Content Area */}
+        <div className="flex-1 max-w-2xl w-full">
+          <AnimatePresence mode="wait">
+            {activeTab === 'profile' && (
+              <motion.div 
+                key="tab-profile" 
+                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                className="space-y-12"
+              >
+                {/* Profile Section */}
+                <section className="space-y-8 bg-black/40 border border-white/5 p-8 lg:p-12">
+                   <div className="space-y-2">
+                     <h3 className="text-2xl font-light text-editorial">Dados do Perfil</h3>
+                     <p className="text-[10px] text-white/20 uppercase tracking-widest">Suas informações visíveis na plataforma</p>
                    </div>
-                 </div>
-                 <button 
-                  onClick={() => setActiveConfig(activeConfig === 'asaas' ? null : 'asaas')}
-                  className="text-[9px] font-bold text-luxury-cream/30 uppercase tracking-widest hover:text-luxury-gold"
-                 >
-                   {activeConfig === 'asaas' ? 'Fechar' : 'Configurar'}
-                 </button>
-              </div>
-              
-              {activeConfig === 'asaas' && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 pt-4 border-t border-white/5">
-                  <FormInput label="API Key (Asaas)" placeholder="Evolua para Produção" type="password" icon={<CreditCard size={16} />} />
-                  <FormInput label="Webhook Secret" placeholder="••••••••" type="password" />
-                  <button className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors pt-2">
-                    <Save size={14} /> Salvar Integração
-                  </button>
-                </div>
-              )}
-            </div>
+                   
+                   <form onSubmit={handleSaveProfile} className="space-y-6">
+                      <div className="flex items-center gap-8 pb-4">
+                         <div className="w-20 h-20 bg-luxury-gold/10 flex items-center justify-center text-luxury-gold font-serif italic text-4xl border border-luxury-gold/20 shadow-2xl">
+                           {name.charAt(0) || 'P'}
+                         </div>
+                         <div className="space-y-1">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-white">{name || 'Seu Nome'}</p>
+                            <p className="text-[9px] text-luxury-gold/60 uppercase tracking-[0.3em]">{isMaster ? 'Administrador Master' : 'Membro de Equipe'}</p>
+                         </div>
+                      </div>
 
-            {/* R2 */}
-            <div className={cn(
-              "p-6 bg-black/40 border transition-all duration-500",
-              activeConfig === 'r2' ? "border-luxury-gold/50" : "border-white/5"
-            )}>
-              <div className="flex items-center justify-between mb-6">
-                 <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 bg-white/5 flex items-center justify-center text-luxury-gold font-bold text-center pt-1 italic font-serif">C</div>
-                   <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest">Cloudflare R2</p>
-                      <p className="text-[9px] text-green-500 uppercase tracking-widest">Conectado</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormInput label="Nome Comercial" placeholder="Seu nome" value={name} onChange={setName} />
+                        <FormInput label="E-mail de Acesso" placeholder="seu@email.com" value={email} onChange={setEmail} type="email" />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold pl-2">Biografia Curta</label>
+                        <textarea 
+                          value={bio} onChange={e => setBio(e.target.value)}
+                          className="w-full bg-white/5 border border-white/5 px-4 py-4 text-xs text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest min-h-[100px] resize-none"
+                        />
+                      </div>
+
+                      <button 
+                        type="submit" disabled={isSavingProfile}
+                        className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all"
+                      >
+                        {isSavingProfile ? <RefreshCw className="animate-spin" size={14} /> : 'Salvar Alterações'}
+                      </button>
+                   </form>
+                </section>
+
+                {/* Security Section */}
+                <section className="space-y-8 bg-black/40 border border-white/5 p-8 lg:p-12">
+                   <div className="space-y-2">
+                     <h3 className="text-2xl font-light text-editorial">Segurança</h3>
+                     <p className="text-[10px] text-white/20 uppercase tracking-widest">Alterar sua senha de acesso</p>
                    </div>
-                 </div>
-                 <button 
-                  onClick={() => setActiveConfig(activeConfig === 'r2' ? null : 'r2')}
-                  className="text-[9px] font-bold text-luxury-cream/30 uppercase tracking-widest hover:text-luxury-gold"
-                 >
-                   {activeConfig === 'r2' ? 'Fechar' : 'Configurar'}
-                 </button>
-              </div>
+                   
+                   <form onSubmit={handleUpdatePassword} className="space-y-6">
+                      <FormInput 
+                        label="Nova Senha" type="password" placeholder="Mínimo 6 caracteres" 
+                        value={newPassword} onChange={setNewPassword} 
+                      />
+                      <button 
+                        type="submit" disabled={isUpdatingPassword}
+                        className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 hover:bg-white hover:text-black transition-all"
+                      >
+                        {isUpdatingPassword ? <RefreshCw className="animate-spin" size={14} /> : 'Confirmar Nova Senha'}
+                      </button>
+                   </form>
+                </section>
+              </motion.div>
+            )}
 
-              {activeConfig === 'r2' && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 pt-4 border-t border-white/5">
-                  <FormInput label="Account ID" placeholder="Seu ID da Cloudflare" icon={<Cloud size={16} />} />
-                  <FormInput label="Access Key" placeholder="••••••••" type="password" />
-                  <FormInput label="Secret Key" placeholder="••••••••" type="password" />
-                  <button className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-luxury-gold hover:text-white transition-colors pt-2">
-                    <Save size={14} /> Salvar Credenciais
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+            {activeTab === 'team' && isMaster && (
+              <motion.div 
+                key="tab-team" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+              >
+                <AdminTeam />
+              </motion.div>
+            )}
 
-        <section className="space-y-8">
-           <AdminTeam />
-        </section>
+            {activeTab === 'system' && isMaster && (
+              <motion.div 
+                key="tab-system" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                className="space-y-8"
+              >
+                {/* Asaas */}
+                <section className="bg-black/40 border border-white/5 p-8 lg:p-12 space-y-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-light text-editorial">Financeiro</h3>
+                      <p className="text-[10px] text-white/20 uppercase tracking-widest">Integração com gateway Asaas</p>
+                    </div>
+                    <div className="px-3 py-1 bg-green-500/10 border border-green-500/20 text-[8px] text-green-500 font-black uppercase tracking-widest rounded-full">Ativo</div>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <FormInput label="API Key (Asaas)" placeholder="Evolua para Produção" type="password" />
+                    <FormInput label="Webhook Secret" placeholder="••••••••" type="password" />
+                    <button className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all">
+                      Atualizar Chaves
+                    </button>
+                  </div>
+                </section>
 
-        <section className="space-y-6">
-          <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold">Segurança</h3>
-          <button className="w-full py-5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-white/5 transition-colors">Alterar Senha de Acesso</button>
-        </section>
+                {/* Cloudflare */}
+                <section className="bg-black/40 border border-white/5 p-8 lg:p-12 space-y-8">
+                  <div>
+                    <h3 className="text-2xl font-light text-editorial">Armazenamento</h3>
+                    <p className="text-[10px] text-white/20 uppercase tracking-widest">Cloudflare R2 Bucket</p>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <FormInput label="Account ID" placeholder="Cloudflare Account ID" />
+                    <FormInput label="Access Key" placeholder="••••••••" type="password" />
+                    <FormInput label="Secret Key" placeholder="••••••••" type="password" />
+                    <button className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all">
+                      Validar Conexão
+                    </button>
+                  </div>
+                </section>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </AdminLayout>
   );
