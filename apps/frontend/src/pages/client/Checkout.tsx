@@ -215,7 +215,15 @@ export const Checkout = () => {
                     >
                       R$ {balanceToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </motion.p>
-                 </div>
+                  </div>
+
+                  {balanceToPay < 20 && (
+                    <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl mt-6">
+                      <p className="text-[10px] text-rose-500 font-bold uppercase tracking-widest text-center">
+                        O gateway de pagamento exige um valor mínimo de R$ 20,00 por transação.
+                      </p>
+                    </div>
+                  )}
               </div>
              </div>
 

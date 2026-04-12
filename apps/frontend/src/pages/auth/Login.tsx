@@ -2,7 +2,7 @@ import { type FC, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthLayout } from "../../components/auth/AuthLayout";
 import { AuthInput } from "../../components/auth/AuthInput";
-import { Camera, ShieldCheck, ArrowRight, Mail as MailIcon, Key, User } from "lucide-react";
+import { ShieldCheck, ArrowRight, Mail as MailIcon, Key, User, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -18,8 +18,10 @@ export const Login: FC = () => {
   const [mode, setMode] = useState<AuthMode>("client");
   const [clientAccessMode, setClientAccessMode] = useState<ClientAccessMode>("email");
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState<"login" | "request-code">("login");
+  const [view, setView] = useState<"login" | "request-code" | "signup">("login");
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +41,6 @@ export const Login: FC = () => {
             return;
           }
 
-          // Busca cliente pelo e-mail (Login Unificado para Tickets e Galerias)
           const { data: customer, error } = await supabase
             .schema('app_carsena')
             .from('customers')
@@ -59,7 +60,6 @@ export const Login: FC = () => {
           toast.error("E-mail não encontrado. Verifique se é o mesmo e-mail da sua reserva ou compra.");
           return;
         } else {
-          // Acesso via Código (Legacy/Quick access)
           if (!code) {
             toast.error("Por favor, digite seu código de acesso.");
             return;
@@ -67,7 +67,6 @@ export const Login: FC = () => {
 
           const normalizedCode = code.toUpperCase().trim();
 
-          // 1. Busca cliente pelo código de acesso
           const { data: customer } = await supabase
             .schema('app_carsena')
             .from('customers')
@@ -82,7 +81,6 @@ export const Login: FC = () => {
             return;
           }
 
-          // 2. Busca galeria com acesso direto pelo código
           const { data: gallery } = await supabase
             .schema('app_carsena')
             .from('galleries')
@@ -102,7 +100,7 @@ export const Login: FC = () => {
           toast.error("Código de acesso inválido ou expirado.");
         }
       } else {
-        // Login Admin Real via Supabase Auth
+        // Login Admin
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: adminEmail,
           password: adminPassword,
@@ -123,6 +121,48 @@ export const Login: FC = () => {
       }
     } catch (err: any) {
       toast.error("Ocorreu um erro ao realizar o login: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !email || !password) {
+      toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+
+      if (authError) throw authError;
+
+      if (authData.user) {
+        const { error: dbError } = await supabase
+          .schema('app_carsena')
+          .from('photographers')
+          .insert({
+            auth_id: authData.user.id,
+            name,
+            email,
+            user_type: 'admin'
+          });
+
+        if (dbError) console.error("Erro ao criar perfil DB:", dbError);
+
+        toast.success("Conta de gestor criada com sucesso!");
+        setView("login");
+      }
+    } catch (err: any) {
+      toast.error("Erro ao criar conta: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -172,13 +212,9 @@ export const Login: FC = () => {
       subtitle={mode === "client" ? "Acesse todas as suas fotos, ingressos e memórias em um só lugar." : "Ambiente profissional para gestão da plataforma."}
     >
       <div className="space-y-8">
-        {/* Role Selector */}
         <div className="flex bg-white/5 p-1 rounded-none border border-white/10">
           <button
-            onClick={() => {
-              setMode("client");
-              setView("login");
-            }}
+            onClick={() => { setMode("client"); setView("login"); }}
             className={cn(
               "flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-[0.2em] transition-all",
               mode === "client" ? "bg-luxury-gold text-luxury-black" : "text-white/40 hover:text-white"
@@ -199,181 +235,124 @@ export const Login: FC = () => {
           </button>
         </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {mode === "client" ? (
-            view === "login" ? (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                
-                {/* Mode Selector within Client Area */}
-                <div className="flex items-center justify-center gap-6 mb-8 border-b border-white/5 pb-6">
-                  <button
-                    type="button"
-                    onClick={() => setClientAccessMode("email")}
-                    className={cn(
-                      "text-[9px] uppercase tracking-widest font-bold transition-all flex items-center gap-2",
-                      clientAccessMode === "email" ? "text-luxury-gold" : "text-white/30 hover:text-white"
-                    )}
-                  >
-                    <MailIcon size={12} />
-                    Entrar com E-mail
-                  </button>
-                  <div className="w-1 h-1 bg-white/10 rounded-full" />
-                  <button
-                    type="button"
-                    onClick={() => setClientAccessMode("code")}
-                    className={cn(
-                      "text-[9px] uppercase tracking-widest font-bold transition-all flex items-center gap-2",
-                      clientAccessMode === "code" ? "text-luxury-gold" : "text-white/30 hover:text-white"
-                    )}
-                  >
-                    <Key size={12} />
-                    Possuo um Código
-                  </button>
-                </div>
-
-                {clientAccessMode === "email" ? (
-                  <AuthInput
-                    label="E-mail"
-                    type="email"
-                    name="client-email"
-                    placeholder="seu@email.com"
-                    id="client-email"
-                    required
-                  />
-                ) : (
-                  <AuthInput
-                    label="Código de acesso"
-                    type="text"
-                    name="access-code"
-                    placeholder="Ex: JULIA2026"
-                    id="access-code"
-                    required
-                    className="text-center tracking-[0.2em] font-bold uppercase placeholder:tracking-normal placeholder:font-normal placeholder:text-[10px]"
-                  />
-                )}
-
+        {mode === "client" ? (
+          view === "login" ? (
+            <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center justify-center gap-6 mb-8 border-b border-white/5 pb-6">
                 <button
-                  type="submit"
-                  disabled={loading}
+                  type="button"
+                  onClick={() => setClientAccessMode("email")}
                   className={cn(
-                    "w-full bg-luxury-gold text-luxury-black py-6 text-[11px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
-                    loading && "opacity-80 pointer-events-none"
+                    "text-[9px] uppercase tracking-widest font-bold transition-all flex items-center gap-2",
+                    clientAccessMode === "email" ? "text-luxury-gold" : "text-white/30 hover:text-white"
                   )}
                 >
-                  {loading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 border-2 border-luxury-black/30 border-t-luxury-black rounded-full animate-spin" />
-                      Sincronizando...
-                    </span>
-                  ) : (
-                    <>
-                      Acessar meu Portal
-                      <ArrowRight size={14} />
-                    </>
-                  )}
+                  <MailIcon size={12} />
+                  Entrar com E-mail
                 </button>
+                <div className="w-1 h-1 bg-white/10 rounded-full" />
+                <button
+                  type="button"
+                  onClick={() => setClientAccessMode("code")}
+                  className={cn(
+                    "text-[9px] uppercase tracking-widest font-bold transition-all flex items-center gap-2",
+                    clientAccessMode === "code" ? "text-luxury-gold" : "text-white/30 hover:text-white"
+                  )}
+                >
+                  <Key size={12} />
+                  Possuo um Código
+                </button>
+              </div>
 
-                {clientAccessMode === "code" && (
-                  <div className="text-center pt-4">
-                    <button 
-                      type="button"
-                      onClick={() => setView("request-code")}
-                      className="text-[10px] text-white/30 hover:text-luxury-gold transition-colors font-medium uppercase tracking-[0.1em] underline underline-offset-4"
-                    >
-                      Esqueci ou não tenho um código
-                    </button>
-                  </div>
+              {clientAccessMode === "email" ? (
+                <AuthInput label="E-mail" type="email" name="client-email" placeholder="seu@email.com" id="client-email" required />
+              ) : (
+                <AuthInput label="Código de acesso" type="text" name="access-code" placeholder="Ex: JULIA2026" id="access-code" required 
+                  className="text-center tracking-[0.2em] font-bold uppercase placeholder:tracking-normal placeholder:font-normal placeholder:text-[10px]" />
+              )}
+
+              <button type="submit" disabled={loading}
+                className={cn(
+                  "w-full bg-luxury-gold text-luxury-black py-6 text-[11px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
+                  loading && "opacity-80 pointer-events-none"
                 )}
-              </div>
-            ) : (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="space-y-2 text-center mb-4">
-                  <p className="text-[11px] text-white/60 font-light leading-relaxed">
-                    Recupere seu código de acesso usando o e-mail cadastrado.
-                  </p>
-                </div>
-                
-                <AuthInput
-                  label="E-mail"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  id="request-email"
-                  required
-                />
+              >
+                {loading ? <RefreshCw className="animate-spin" size={14} /> : <>Acessar meu Portal <ArrowRight size={14} /></>}
+              </button>
 
-                <div className="flex flex-col gap-4">
-                  <button
-                    type="button"
-                    onClick={handleRequestCode}
-                    disabled={loading || !email}
-                    className={cn(
-                      "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
-                      (loading || !email) && "opacity-80 pointer-events-none"
-                    )}
+              {clientAccessMode === "code" && (
+                <div className="text-center pt-4">
+                  <button type="button" onClick={() => setView("request-code")}
+                    className="text-[10px] text-white/30 hover:text-luxury-gold transition-colors font-medium uppercase tracking-[0.1em] underline underline-offset-4"
                   >
-                    {loading ? "Enviando..." : "Enviar Código"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setView("login")}
-                    className="text-[10px] text-white/40 hover:text-white transition-colors font-medium tracking-wide uppercase"
-                  >
-                    Voltar para o Login
+                    Esqueci ou não tenho um código
                   </button>
                 </div>
-              </div>
-            )
+              )}
+            </form>
           ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <AuthInput
-                label="E-mail"
-                type="email"
-                name="email"
-                placeholder="gestor@carsena.com.br"
-                id="email"
-                required
-                autoComplete="email"
-              />
-              
-              <div className="space-y-1">
-                <AuthInput
-                  label="Senha"
-                  type="password"
-                  name="password"
-                  placeholder="••••••••"
-                  id="password"
-                  required
-                  autoComplete="current-password"
-                />
-                <div className="flex justify-end">
-                  <Link 
-                    to="/forgot-password" 
-                    className="text-[10px] text-white/40 hover:text-luxury-gold transition-colors font-medium tracking-wide"
-                  >
-                    Esqueceu sua senha?
-                  </Link>
-                </div>
+              <AuthInput label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" id="request-email" required />
+              <div className="flex flex-col gap-4">
+                <button type="button" onClick={handleRequestCode} disabled={loading || !email}
+                  className={cn(
+                    "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
+                    (loading || !email) && "opacity-80 pointer-events-none"
+                  )}
+                >
+                  {loading ? "Enviando..." : "Enviar Código"}
+                </button>
+                <button type="button" onClick={() => setView("login")}
+                  className="text-[10px] text-white/40 hover:text-white transition-colors font-medium tracking-wide uppercase"
+                >
+                  Voltar para o Login
+                </button>
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
+            </div>
+          )
+        ) : (
+          view === "login" ? (
+            <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <AuthInput label="E-mail" type="email" name="email" placeholder="seu@contato.com" id="email" required autoComplete="email" />
+              <AuthInput label="Senha" type="password" name="password" placeholder="••••••••" id="password" required autoComplete="current-password" />
+              <button type="submit" disabled={loading}
                 className={cn(
                   "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
                   loading && "opacity-80 pointer-events-none"
                 )}
               >
-                {loading ? "Autenticando..." : "Entrar no Painel"}
+                {loading ? <RefreshCw className="animate-spin" size={14} /> : "Entrar no Painel"}
               </button>
-            </div>
-          )}
-        </form>
+              <div className="text-center pt-2">
+                <button type="button" onClick={() => setView('signup')}
+                  className="text-[10px] text-luxury-gold/60 hover:text-luxury-gold transition-colors font-bold uppercase tracking-widest"
+                >
+                  Novo por aqui? Criar meu Estúdio
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSignUp} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <AuthInput label="Nome do Gestor / Empresa" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Carsena Fotografia" id="signup-name" required />
+              <AuthInput label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@contato.com" id="signup-email" required />
+              <AuthInput label="Senha" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" id="signup-password" required />
+              <button type="submit" disabled={loading}
+                className={cn(
+                  "w-full bg-luxury-gold text-luxury-black py-5 text-[10px] font-bold uppercase tracking-[0.4em] shadow-2xl hover:scale-[1.02] active:scale-100 transition-all flex items-center justify-center gap-3",
+                  loading && "opacity-80 pointer-events-none"
+                )}
+              >
+                {loading ? <RefreshCw className="animate-spin" size={14} /> : "Criar meu Estúdio Profissional"}
+              </button>
+              <div className="text-center">
+                <button type="button" onClick={() => setView('login')} className="text-[10px] text-white/30 hover:text-white transition-colors uppercase tracking-widest">
+                  Voltar para o Login
+                </button>
+              </div>
+            </form>
+          )
+        )}
 
-        {/* Support Link */}
         <div className="pt-4 border-t border-white/5 text-center">
           <p className="text-[11px] text-white/30 font-light tracking-wide leading-relaxed">
             Dificuldades no acesso? <br/>

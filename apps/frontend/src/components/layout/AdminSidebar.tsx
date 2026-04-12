@@ -22,13 +22,12 @@ interface AdminSidebarProps {
 
 const navItems = [
   { icon: <Home size={24} />, label: "Escritório", path: "/admin", description: "Visão Geral" },
-  { icon: <Maximize size={24} />, label: "Portaria", path: "/admin/validar", description: "Validar Ingresso" },
   { icon: <Camera size={24} />, label: "Estúdio", path: "/admin/estudio", description: "Fotos & Clientes" },
   { icon: <Ticket size={24} />, label: "Bilheteria", path: "/admin/bilheteria", description: "Ingressos & Eventos" },
+  { icon: <Maximize size={24} />, label: "Portaria", path: "/admin/validar", description: "Validar Ingresso" },
   { icon: <Layout size={24} />, label: "Vitrine", path: "/admin/vitrine", description: "Editar Meu Site" },
-  { icon: <Wallet size={24} />, label: "Caixa", path: "/admin/caixa", description: "Meu Financeiro" },
-  { icon: <Cloud size={24} />, label: "Nuvem", path: "/admin/nuvem", description: "Fotos na Nuvem" },
-  { icon: <Settings size={24} />, label: "Ajustes", path: "/admin/ajustes", description: "Minha Conta" },
+  { icon: <Wallet size={24} />, label: "Caixa", path: "/admin/caixa", description: "Financeiro" },
+  { icon: <Settings size={24} />, label: "Ajustes", path: "/admin/ajustes", description: "Configurações" },
 ];
 
 const StorageUsage = () => {

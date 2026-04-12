@@ -235,7 +235,8 @@ export const AdminGalleries = () => {
       setCustomers(clRes.data || []);
       setAdmins(admRes.data || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar dados do estúdio: " + error.message);
+      console.error("Erro ao carregar estúdio:", error);
+      toast.error("Erro ao carregar dados do estúdio. Verifique sua conexão.");
     } finally {
       setLoading(false);
     }
@@ -2497,7 +2498,7 @@ const AdminTeam = () => {
                     "text-[8px] px-1.5 py-0.5 rounded-sm font-bold tracking-tighter uppercase",
                     p.user_type === 'admin' ? "bg-luxury-gold/20 text-luxury-gold" : "bg-white/10 text-white/40"
                   )}>
-                    {p.user_type === 'admin' ? 'Gestor' : 'Equipe'}
+                    {p.user_type === 'admin' ? 'Gestor Master' : 'Equipe'}
                   </span>
                 </div>
                 <p className="text-[9px] text-luxury-cream/40 uppercase tracking-widest">{p.email}</p>
@@ -2560,8 +2561,8 @@ const AdminTeam = () => {
                 onChange={(e) => setNewAdmin({...newAdmin, user_type: e.target.value})}
                 className="w-full bg-white/5 border border-white/5 px-4 py-4 text-[10px] text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
               >
-                <option value="admin">Gestor Master (Acesso Total)</option>
-                <option value="staff">Fotógrafo / Suporte (Acesso Limitado)</option>
+                <option value="admin">Gestor Master</option>
+                <option value="staff">Equipe</option>
               </select>
               <p className="text-[8px] text-white/20 uppercase tracking-[0.2em] leading-relaxed italic">
                 * Gestores Master possuem controle total sobre faturamento, equipe e integrações do sistema.
@@ -2600,8 +2601,8 @@ const AdminTeam = () => {
                 onChange={(e) => setEditingAdmin({...editingAdmin, user_type: e.target.value})}
                 className="w-full bg-white/5 border border-white/5 px-4 py-4 text-[10px] text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest"
               >
-                <option value="admin">Gestor Master (Total)</option>
-                <option value="staff">Fotógrafo / Suporte (Limitado)</option>
+                <option value="admin">Gestor Master</option>
+                <option value="staff">Equipe</option>
               </select>
             </div>
             <div className="pt-4">
@@ -2630,13 +2631,83 @@ export const AdminSettings = () => {
   const [newPassword, setNewPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // System Settings State
+  const [systemSettings, setSystemSettings] = useState({
+    asaas_key: '',
+    asaas_webhook: '',
+    cloudflare_id: '',
+    cloudflare_key: '',
+    cloudflare_secret: ''
+  });
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
   useEffect(() => {
     if (profile) {
       setName(profile.name || '');
       setEmail(profile.email || '');
       setBio(profile.bio || '');
     }
-  }, [profile]);
+    if (activeTab === 'system') {
+      fetchSystemSettings();
+    }
+  }, [profile, activeTab]);
+
+  const fetchSystemSettings = async () => {
+    setIsLoadingSettings(true);
+    try {
+      const { data, error } = await supabase
+        .schema('app_carsena')
+        .from('system_settings')
+        .select('*');
+
+      if (error) throw error;
+
+      const settings = {
+        asaas_key: data.find(s => s.key === 'asaas_key')?.value?.secret || '',
+        asaas_webhook: data.find(s => s.key === 'asaas_webhook')?.value?.secret || '',
+        cloudflare_id: data.find(s => s.key === 'cloudflare_id')?.value?.secret || '',
+        cloudflare_key: data.find(s => s.key === 'cloudflare_key')?.value?.secret || '',
+        cloudflare_secret: data.find(s => s.key === 'cloudflare_secret')?.value?.secret || ''
+      };
+      setSystemSettings(settings);
+    } catch (error: any) {
+      console.error("Erro ao carregar configurações:", error);
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  };
+
+  const handleSaveSystemSettings = async (type: 'asaas' | 'cloudflare') => {
+    setIsSavingSettings(true);
+    try {
+      const updates = [];
+      if (type === 'asaas') {
+        updates.push(
+          { key: 'asaas_key', value: { secret: systemSettings.asaas_key }, updated_at: new Date().toISOString() },
+          { key: 'asaas_webhook', value: { secret: systemSettings.asaas_webhook }, updated_at: new Date().toISOString() }
+        );
+      } else {
+        updates.push(
+          { key: 'cloudflare_id', value: { secret: systemSettings.cloudflare_id }, updated_at: new Date().toISOString() },
+          { key: 'cloudflare_key', value: { secret: systemSettings.cloudflare_key }, updated_at: new Date().toISOString() },
+          { key: 'cloudflare_secret', value: { secret: systemSettings.cloudflare_secret }, updated_at: new Date().toISOString() }
+        );
+      }
+
+      const { error } = await supabase
+        .schema('app_carsena')
+        .from('system_settings')
+        .upsert(updates, { onConflict: 'key' });
+
+      if (error) throw error;
+      toast.success("Configurações salvas com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao salvar: " + error.message);
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2739,64 +2810,70 @@ export const AdminSettings = () => {
                 className="space-y-12"
               >
                 {/* Profile Section */}
-                <section className="space-y-8 bg-black/40 border border-white/5 p-8 lg:p-12">
-                   <div className="space-y-2">
-                     <h3 className="text-2xl font-light text-editorial">Dados do Perfil</h3>
-                     <p className="text-[10px] text-white/20 uppercase tracking-widest">Suas informações visíveis na plataforma</p>
+                <section className="bg-black/40 border border-white/5 p-8 lg:p-12 overflow-hidden">
+                   <div className="grid grid-cols-1 xl:grid-cols-3 gap-12">
+                     {/* Information Column */}
+                     <div className="xl:col-span-2 space-y-8">
+                       <div className="space-y-2">
+                         <h3 className="text-2xl font-light text-editorial">Dados do Perfil</h3>
+                         <p className="text-[10px] text-white/20 uppercase tracking-widest">Informações de acesso e biografia</p>
+                       </div>
+                       
+                       <form onSubmit={handleSaveProfile} className="space-y-6">
+                          <div className="flex items-center gap-8 pb-4">
+                             <div className="w-20 h-20 bg-luxury-gold/10 flex items-center justify-center text-luxury-gold font-serif italic text-4xl border border-luxury-gold/20 shadow-2xl">
+                               {name.charAt(0) || 'P'}
+                             </div>
+                             <div className="space-y-1">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-white">{name || 'Seu Nome'}</p>
+                                <p className="text-[9px] text-luxury-gold/60 uppercase tracking-[0.3em]">{isMaster ? 'Gestor Master' : 'Equipe'}</p>
+                             </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormInput label="Nome Comercial" placeholder="Seu nome" value={name} onChange={setName} />
+                            <FormInput label="E-mail de Acesso" placeholder="seu@email.com" value={email} onChange={setEmail} type="email" />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold pl-2">Biografia Curta (Opcional)</label>
+                            <textarea 
+                              value={bio} onChange={e => setBio(e.target.value)}
+                              placeholder="Fale um pouco sobre você..."
+                              className="w-full bg-white/5 border border-white/5 px-4 py-4 text-xs text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest min-h-[100px] resize-none"
+                            />
+                          </div>
+
+                          <button 
+                            type="submit" disabled={isSavingProfile}
+                            className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all"
+                          >
+                            {isSavingProfile ? <RefreshCw className="animate-spin" size={14} /> : 'Salvar Perfil'}
+                          </button>
+                       </form>
+                     </div>
+
+                     {/* Security Column */}
+                     <div className="space-y-8 pt-12 xl:pt-0 xl:border-l xl:border-white/5 xl:pl-12">
+                       <div className="space-y-2">
+                         <h3 className="text-xl font-light text-editorial">Segurança</h3>
+                         <p className="text-[10px] text-white/20 uppercase tracking-widest">A senha de sua conta</p>
+                       </div>
+                       
+                       <form onSubmit={handleUpdatePassword} className="space-y-6">
+                          <FormInput 
+                            label="Nova Senha" type="password" placeholder="Mínimo 6 caracteres" 
+                            value={newPassword} onChange={setNewPassword} 
+                          />
+                          <button 
+                            type="submit" disabled={isUpdatingPassword}
+                            className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 hover:bg-white hover:text-black transition-all"
+                          >
+                            {isUpdatingPassword ? <RefreshCw className="animate-spin" size={14} /> : 'Trocar Senha'}
+                          </button>
+                       </form>
+                     </div>
                    </div>
-                   
-                   <form onSubmit={handleSaveProfile} className="space-y-6">
-                      <div className="flex items-center gap-8 pb-4">
-                         <div className="w-20 h-20 bg-luxury-gold/10 flex items-center justify-center text-luxury-gold font-serif italic text-4xl border border-luxury-gold/20 shadow-2xl">
-                           {name.charAt(0) || 'P'}
-                         </div>
-                         <div className="space-y-1">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-white">{name || 'Seu Nome'}</p>
-                            <p className="text-[9px] text-luxury-gold/60 uppercase tracking-[0.3em]">{isMaster ? 'Administrador Master' : 'Membro de Equipe'}</p>
-                         </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormInput label="Nome Comercial" placeholder="Seu nome" value={name} onChange={setName} />
-                        <FormInput label="E-mail de Acesso" placeholder="seu@email.com" value={email} onChange={setEmail} type="email" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.2em] text-luxury-cream/40 font-bold pl-2">Biografia Curta</label>
-                        <textarea 
-                          value={bio} onChange={e => setBio(e.target.value)}
-                          className="w-full bg-white/5 border border-white/5 px-4 py-4 text-xs text-luxury-cream outline-none focus:border-luxury-gold/50 transition-colors uppercase tracking-widest min-h-[100px] resize-none"
-                        />
-                      </div>
-
-                      <button 
-                        type="submit" disabled={isSavingProfile}
-                        className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all"
-                      >
-                        {isSavingProfile ? <RefreshCw className="animate-spin" size={14} /> : 'Salvar Alterações'}
-                      </button>
-                   </form>
-                </section>
-
-                {/* Security Section */}
-                <section className="space-y-8 bg-black/40 border border-white/5 p-8 lg:p-12">
-                   <div className="space-y-2">
-                     <h3 className="text-2xl font-light text-editorial">Segurança</h3>
-                     <p className="text-[10px] text-white/20 uppercase tracking-widest">Alterar sua senha de acesso</p>
-                   </div>
-                   
-                   <form onSubmit={handleUpdatePassword} className="space-y-6">
-                      <FormInput 
-                        label="Nova Senha" type="password" placeholder="Mínimo 6 caracteres" 
-                        value={newPassword} onChange={setNewPassword} 
-                      />
-                      <button 
-                        type="submit" disabled={isUpdatingPassword}
-                        className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-white/40 hover:bg-white hover:text-black transition-all"
-                      >
-                        {isUpdatingPassword ? <RefreshCw className="animate-spin" size={14} /> : 'Confirmar Nova Senha'}
-                      </button>
-                   </form>
                 </section>
               </motion.div>
             )}
@@ -2814,41 +2891,91 @@ export const AdminSettings = () => {
                 key="tab-system" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
                 className="space-y-8"
               >
-                {/* Asaas */}
-                <section className="bg-black/40 border border-white/5 p-8 lg:p-12 space-y-8">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-2xl font-light text-editorial">Financeiro</h3>
-                      <p className="text-[10px] text-white/20 uppercase tracking-widest">Integração com gateway Asaas</p>
-                    </div>
-                    <div className="px-3 py-1 bg-green-500/10 border border-green-500/20 text-[8px] text-green-500 font-black uppercase tracking-widest rounded-full">Ativo</div>
+                {isLoadingSettings ? (
+                  <div className="p-20 text-center text-luxury-gold/20 text-[10px] uppercase tracking-widest animate-pulse">
+                    Carregando chaves de segurança...
                   </div>
-                  
-                  <div className="space-y-6">
-                    <FormInput label="API Key (Asaas)" placeholder="Evolua para Produção" type="password" />
-                    <FormInput label="Webhook Secret" placeholder="••••••••" type="password" />
-                    <button className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all">
-                      Atualizar Chaves
-                    </button>
-                  </div>
-                </section>
+                ) : (
+                  <>
+                    {/* Asaas */}
+                    <section className="bg-black/40 border border-white/5 p-8 lg:p-12 space-y-8">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-2xl font-light text-editorial">Financeiro</h3>
+                          <p className="text-[10px] text-white/20 uppercase tracking-widest">Integração com gateway Asaas</p>
+                        </div>
+                        <div className={cn(
+                          "px-3 py-1 border text-[8px] font-black uppercase tracking-widest rounded-full",
+                          systemSettings.asaas_key ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-red-500/10 border-red-500/20 text-red-500"
+                        )}>
+                          {systemSettings.asaas_key ? 'Ativo' : 'Pendente'}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <FormInput 
+                          label="API Key (Asaas)" 
+                          placeholder="$$$..." 
+                          type="password" 
+                          value={systemSettings.asaas_key}
+                          onChange={(val) => setSystemSettings({...systemSettings, asaas_key: val})}
+                        />
+                        <FormInput 
+                          label="Webhook Secret" 
+                          placeholder="Token de segurança" 
+                          type="password" 
+                          value={systemSettings.asaas_webhook}
+                          onChange={(val) => setSystemSettings({...systemSettings, asaas_webhook: val})}
+                        />
+                        <button 
+                          onClick={() => handleSaveSystemSettings('asaas')}
+                          disabled={isSavingSettings}
+                          className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all"
+                        >
+                          {isSavingSettings ? <RefreshCw className="animate-spin" size={14} /> : 'Atualizar Chaves Financeiras'}
+                        </button>
+                      </div>
+                    </section>
 
-                {/* Cloudflare */}
-                <section className="bg-black/40 border border-white/5 p-8 lg:p-12 space-y-8">
-                  <div>
-                    <h3 className="text-2xl font-light text-editorial">Armazenamento</h3>
-                    <p className="text-[10px] text-white/20 uppercase tracking-widest">Cloudflare R2 Bucket</p>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    <FormInput label="Account ID" placeholder="Cloudflare Account ID" />
-                    <FormInput label="Access Key" placeholder="••••••••" type="password" />
-                    <FormInput label="Secret Key" placeholder="••••••••" type="password" />
-                    <button className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all">
-                      Validar Conexão
-                    </button>
-                  </div>
-                </section>
+                    {/* Cloudflare */}
+                    <section className="bg-black/40 border border-white/5 p-8 lg:p-12 space-y-8">
+                      <div>
+                        <h3 className="text-2xl font-light text-editorial">Armazenamento</h3>
+                        <p className="text-[10px] text-white/20 uppercase tracking-widest">Cloudflare R2 Bucket</p>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <FormInput 
+                          label="Account ID" 
+                          placeholder="ID da sua conta Cloudflare" 
+                          value={systemSettings.cloudflare_id}
+                          onChange={(val) => setSystemSettings({...systemSettings, cloudflare_id: val})}
+                        />
+                        <FormInput 
+                          label="Access Key" 
+                          placeholder="ID de acesso R2" 
+                          type="password" 
+                          value={systemSettings.cloudflare_key}
+                          onChange={(val) => setSystemSettings({...systemSettings, cloudflare_key: val})}
+                        />
+                        <FormInput 
+                          label="Secret Key" 
+                          placeholder="Chave secreta R2" 
+                          type="password" 
+                          value={systemSettings.cloudflare_secret}
+                          onChange={(val) => setSystemSettings({...systemSettings, cloudflare_secret: val})}
+                        />
+                        <button 
+                          onClick={() => handleSaveSystemSettings('cloudflare')}
+                          disabled={isSavingSettings}
+                          className="w-full py-5 bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:bg-luxury-gold hover:text-black transition-all"
+                        >
+                           {isSavingSettings ? <RefreshCw className="animate-spin" size={14} /> : 'Validar e Salvar Nuvem'}
+                        </button>
+                      </div>
+                    </section>
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

@@ -329,7 +329,7 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children }) => {
                           <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-luxury-gold">Logado como</p>
                           <span className="text-[8px] px-2 py-0.5 border border-luxury-gold/30 text-luxury-gold uppercase tracking-widest font-bold rounded-full">Pro Member</span>
                         </div>
-                        <p className="text-[12px] font-bold text-white truncate">{profile?.email || 'paulo@carsena.photo'}</p>
+                        <p className="text-[12px] font-bold text-white truncate">{profile?.email || ''}</p>
                       </div>
 
                       <div className="p-2">
