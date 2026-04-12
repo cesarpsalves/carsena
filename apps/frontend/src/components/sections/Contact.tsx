@@ -118,51 +118,42 @@ export const Contact = ({ title, subtitle, data }: ContactProps) => {
               ) : (
                 <>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-black/40">Nome Completo</label>
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-black/40">Seu Nome</label>
                     <input 
                       required
                       type="text" 
                       value={formData.name}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
                       className="w-full border-b border-luxury-black/10 py-3 focus:border-luxury-gold outline-none transition-colors font-serif text-lg md:text-xl" 
-                      placeholder="Seu nome" 
+                      placeholder="Como deseja ser chamado(a)?" 
                     />
                   </div>
+                  
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-black/40">Seu E-mail</label>
-                    <input 
-                      required
-                      type="email" 
-                      value={formData.email}
-                      onChange={e => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full border-b border-luxury-black/10 py-3 focus:border-luxury-gold outline-none transition-colors font-serif text-lg md:text-xl" 
-                      placeholder="email@exemplo.com" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-black/40">Mensagem</label>
+                    <label className="text-[9px] font-bold uppercase tracking-widest text-luxury-black/40">Sua Mensagem</label>
                     <textarea 
                       required
                       rows={3} 
                       value={formData.message}
                       onChange={e => setFormData({ ...formData, message: e.target.value })}
                       className="w-full border-b border-luxury-black/10 py-3 focus:border-luxury-gold outline-none transition-colors font-serif text-lg md:text-xl resize-none" 
-                      placeholder="Como podemos ajudar?" 
+                      placeholder="Conte um pouco sobre seu evento ou projeto..." 
                     />
                   </div>
+                  
                   <button 
                     disabled={status === 'loading'}
                     type="submit" 
-                    className="w-full bg-luxury-black text-luxury-gold font-bold text-[10px] md:text-[11px] uppercase tracking-[0.3em] py-5 md:py-6 hover:bg-luxury-gold hover:text-luxury-black disabled:opacity-50 transition-all duration-300 flex items-center justify-center gap-4"
+                    className="w-full bg-luxury-black text-luxury-gold font-bold text-[10px] md:text-[11px] uppercase tracking-[0.3em] py-5 md:py-6 hover:bg-luxury-gold hover:text-luxury-black disabled:opacity-50 transition-all duration-300 flex items-center justify-center gap-4 shadow-xl group"
                   >
                     {status === 'loading' ? (
-                      <>Enviando... <Loader2 className="animate-spin" size={16} /></>
+                      <>Processando... <Loader2 className="animate-spin" size={16} /></>
                     ) : (
-                      <>Enviar Mensagem <Send size={16} /></>
+                      <>Iniciar Atendimento VIP <Phone size={16} className="group-hover:translate-x-1 transition-transform" /></>
                     )}
                   </button>
                   {status === 'error' && (
-                    <p className="text-red-500 text-[10px] text-center uppercase tracking-widest">Ocorreu um erro ao enviar. Tente novamente.</p>
+                    <p className="text-red-500 text-[10px] text-center uppercase tracking-widest">Ocorreu um erro ao conectar. Tente novamente.</p>
                   )}
                 </>
               )}
