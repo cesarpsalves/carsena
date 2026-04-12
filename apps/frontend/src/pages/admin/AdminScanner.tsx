@@ -12,6 +12,8 @@ export const AdminScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [cameras, setCameras] = useState<{ id: string, label: string }[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = "reader";
 
@@ -19,13 +21,59 @@ export const AdminScanner = () => {
     // Inicializa a instância do scanner uma única vez
     html5QrCodeRef.current = new Html5Qrcode(scannerContainerId);
 
-    // Inicia o scanner automaticamente
-    startScanner();
+    // Detecta câmeras disponíveis
+    detectCameras();
 
     return () => {
       stopScanner();
     };
   }, []);
+
+  const detectCameras = async () => {
+    try {
+      const devices = await Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        setCameras(devices.map(d => ({ id: d.id, label: d.label })));
+        
+        // Se houver câmeras, tenta iniciar com a traseira ou a primeira disponível
+        const backCamera = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('traseira'));
+        const initialCameraId = backCamera ? backCamera.id : devices[0].id;
+        setSelectedCameraId(initialCameraId);
+        startScannerWithId(initialCameraId);
+      }
+    } catch (err) {
+      console.error("Erro ao detectar câmeras:", err);
+    }
+  };
+
+  const startScannerWithId = async (cameraId: string) => {
+    try {
+      if (!html5QrCodeRef.current) return;
+      
+      // Se já estiver escaneando, para antes de trocar
+      if (html5QrCodeRef.current.isScanning) {
+        await html5QrCodeRef.current.stop();
+      }
+
+      setIsScanning(true);
+      setScanResult(null);
+
+      await html5QrCodeRef.current.start(
+        cameraId,
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
+        onScanSuccess,
+        onScanFailure
+      );
+      setHasPermission(true);
+    } catch (err: any) {
+      console.error("Erro ao iniciar câmera específica:", err);
+      // Fallback para facingMode se o ID falhar
+      startScanner();
+    }
+  };
 
   const startScanner = async () => {
     try {
@@ -126,6 +174,28 @@ export const AdminScanner = () => {
             <p className="text-[10px] uppercase tracking-[0.4em] text-luxury-gold font-bold">Validação Online 24h</p>
           </div>
         </div>
+
+        {/* Seleção de Câmera */}
+        {cameras.length > 1 && isScanning && (
+          <div className="flex flex-col gap-2">
+            <label className="text-[9px] uppercase tracking-widest text-white/30 font-bold ml-2">Trocar Câmera</label>
+            <select 
+              value={selectedCameraId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedCameraId(id);
+                startScannerWithId(id);
+              }}
+              className="w-full bg-white/5 border border-white/10 py-3 px-4 text-[10px] font-bold text-luxury-gold uppercase tracking-widest outline-none focus:border-luxury-gold transition-colors appearance-none"
+            >
+              {cameras.map(camera => (
+                <option key={camera.id} value={camera.id} className="bg-luxury-black">
+                  {camera.label || `Câmera ${camera.id.slice(0, 4)}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Área Central: Scanner */}
         <div className="relative aspect-square w-full max-w-[400px] mx-auto overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-2xl">

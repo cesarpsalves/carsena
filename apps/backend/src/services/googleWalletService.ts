@@ -96,6 +96,11 @@ export class GoogleWalletService {
     };
 
     const token = jwt.sign(payload, config.privateKey, { algorithm: 'RS256' });
+    
+    console.log('[GoogleWallet] Link generated successfully for ticket:', ticketId);
+    console.log('[GoogleWallet] Using Issuer ID:', config.issuerId);
+    console.log('[GoogleWallet] Using Class ID:', `${config.issuerId}.${cleanClassId}`);
+    
     return `https://pay.google.com/gp/v/save/${token}`;
   }
 }

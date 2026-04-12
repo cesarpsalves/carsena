@@ -63,8 +63,13 @@ function toPhoto(img: PortfolioImage | typeof DEFAULT_PHOTOS[number]): Portfolio
  *   Position 4+ → full width (12/12 cols on desktop)
  */
 function getGridClass(index: number): string {
-  const pattern = ['col-span-12 md:col-span-8 h-[600px]', 'col-span-12 md:col-span-4 h-[600px]', 'col-span-12 md:col-span-4 h-[500px]', 'col-span-12 md:col-span-8 h-[500px]'];
-  return pattern[index] ?? 'col-span-12 h-[400px]';
+  const pattern = [
+    'col-span-12 md:col-span-8 h-[400px] md:h-[600px]', 
+    'col-span-12 md:col-span-4 h-[400px] md:h-[600px]', 
+    'col-span-12 md:col-span-4 h-[400px] md:h-[500px]', 
+    'col-span-12 md:col-span-8 h-[400px] md:h-[500px]'
+  ];
+  return pattern[index] ?? 'col-span-12 h-[300px] md:h-[400px]';
 }
 
 interface PortfolioProps {

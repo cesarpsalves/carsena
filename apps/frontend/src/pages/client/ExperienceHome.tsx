@@ -216,9 +216,9 @@ export const ExperienceHome = () => {
                     <motion.h1 
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="text-6xl md:text-8xl font-editorial tracking-tight leading-none"
+                        className="text-5xl md:text-8xl font-editorial tracking-tight leading-none"
                     >
-                        Olá, <span className="text-luxury-gold italic">{customer?.name?.split(' ')[0]}</span>
+                        Olá, <span className="text-luxury-gold italic text-4xl md:text-8xl">{customer?.name?.split(' ')[0]}</span>
                     </motion.h1>
                     <p className="text-white/40 text-lg max-w-xl font-light leading-relaxed italic">
                         "Cada fotografia é um fragmento de tempo que não volta, mas que aqui, permanece eterno."
@@ -274,13 +274,13 @@ export const ExperienceHome = () => {
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12"
                 >
                     {filteredExperiences.map((exp, idx) => (
-                        <motion.div
-                            key={exp.id}
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className="group"
-                        >
+                            <motion.div
+                                key={exp.id}
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                                className="group max-w-sm mx-auto md:max-w-none w-full"
+                            >
                             <Link to={exp.path} className="block relative aspect-[4/5] overflow-hidden mb-8 bg-white/5 transition-all group-hover:shadow-[0_45px_100px_-20px_rgba(0,0,0,0.8),0_0_50px_-10px_rgba(197,165,114,0.15)] group-hover:-translate-y-2">
                                 <img 
                                     src={exp.image} 
