@@ -109,45 +109,50 @@ const Portfolio: React.FC = () => {
             </motion.div>
           </header>
 
-          {/* Elegant Categories Bar */}
+          {/* Elegant Categories Bar with Faded Edges for many categories */}
           {!loading && categories.length > 1 && (
             <div className="sticky top-20 z-40 bg-luxury-black/80 backdrop-blur-md -mx-6 px-6 md:-mx-12 md:px-12 mb-16 py-4">
-              <div className="container-premium overflow-x-auto no-scrollbar flex justify-center">
-                <div className="flex items-center gap-2 md:gap-4 p-1.5 bg-white/5 rounded-full border border-white/10 min-w-max">
-                  {categories.map((category: string) => (
-                    <button
-                      key={category}
-                      onClick={() => {
-                        setActiveCategory(category);
-                        const gridElement = document.getElementById('portfolio-grid');
-                        if (gridElement) {
-                          const top = gridElement.getBoundingClientRect().top + window.scrollY - 180;
-                          window.scrollTo({ top, behavior: 'smooth' });
-                        }
-                      }}
-                      className={`relative px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-500 overflow-hidden group ${activeCategory === category
-                        ? 'text-luxury-black'
-                        : 'text-luxury-cream/40 hover:text-luxury-cream'
-                        }`}
-                    >
-                      {/* Active Background Pill */}
-                      {activeCategory === category && (
-                        <motion.div
-                          layoutId="activeCategoryPill"
-                          className="absolute inset-0 bg-luxury-gold"
-                          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                        />
-                      )}
+              <div className="relative group/nav overflow-hidden">
+                {/* Visual Fades */}
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-luxury-black to-transparent z-10 md:hidden" />
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-luxury-black to-transparent z-10 md:hidden" />
 
-                      <span className="relative z-10 flex items-center gap-2">
-                        {category}
-                        <span className={`text-[8px] opacity-40 group-hover:opacity-100 transition-opacity ${activeCategory === category ? 'text-luxury-black animate-pulse' : ''
-                          }`}>
-                          ({getCategoryCount(category)})
+                <div className="container-premium overflow-x-auto no-scrollbar scroll-smooth">
+                  <div className="flex items-center justify-start md:justify-center gap-2 md:gap-3 p-1.5 bg-white/5 rounded-full border border-white/10 min-w-max mx-auto md:w-max">
+                    {categories.map((category: string) => (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          setActiveCategory(category);
+                          const gridElement = document.getElementById('portfolio-grid');
+                          if (gridElement) {
+                            const top = gridElement.getBoundingClientRect().top + window.scrollY - 180;
+                            window.scrollTo({ top, behavior: 'smooth' });
+                          }
+                        }}
+                        className={`relative px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-500 overflow-hidden group/btn ${activeCategory === category
+                            ? 'text-luxury-black'
+                            : 'text-luxury-cream/40 hover:text-luxury-cream'
+                          }`}
+                      >
+                        {activeCategory === category && (
+                          <motion.div
+                            layoutId="activeCategoryPill"
+                            className="absolute inset-0 bg-luxury-gold"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                          />
+                        )}
+
+                        <span className="relative z-10 flex items-center gap-2 whitespace-nowrap">
+                          {category}
+                          <span className={`text-[8px] opacity-40 group-hover/btn:opacity-100 transition-opacity ${activeCategory === category ? 'text-luxury-black/60 font-black' : ''
+                            }`}>
+                            {getCategoryCount(category)}
+                          </span>
                         </span>
-                      </span>
-                    </button>
-                  ))}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
