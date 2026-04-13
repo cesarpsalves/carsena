@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { portfolioService, getPortfolioPublicUrl } from '@/lib/portfolio';
@@ -109,11 +109,11 @@ const Portfolio: React.FC = () => {
             </motion.div>
           </header>
 
-          {/* Sticky Categories Bar */}
+          {/* Elegant Categories Bar */}
           {!loading && categories.length > 1 && (
-            <div className="sticky top-20 z-40 bg-luxury-black/90 backdrop-blur-xl border-b border-white/5 -mx-6 px-6 md:-mx-12 md:px-12 mb-12">
-              <div className="container-premium overflow-x-auto no-scrollbar">
-                <div className="flex items-center gap-10 md:gap-12 py-6 min-w-max">
+            <div className="sticky top-20 z-40 bg-luxury-black/80 backdrop-blur-md -mx-6 px-6 md:-mx-12 md:px-12 mb-16 py-4">
+              <div className="container-premium overflow-x-auto no-scrollbar flex justify-center">
+                <div className="flex items-center gap-2 md:gap-4 p-1.5 bg-white/5 rounded-full border border-white/10 min-w-max">
                   {categories.map((category: string) => (
                     <button
                       key={category}
@@ -121,28 +121,31 @@ const Portfolio: React.FC = () => {
                         setActiveCategory(category);
                         const gridElement = document.getElementById('portfolio-grid');
                         if (gridElement) {
-                          const top = gridElement.getBoundingClientRect().top + window.scrollY - 160;
+                          const top = gridElement.getBoundingClientRect().top + window.scrollY - 180;
                           window.scrollTo({ top, behavior: 'smooth' });
                         }
                       }}
-                      className={`group text-[10px] font-bold uppercase tracking-[0.3em] transition-all relative pb-2 flex items-center gap-2 ${activeCategory === category
-                        ? 'text-luxury-gold'
-                        : 'text-luxury-cream/30 hover:text-luxury-cream'
+                      className={`relative px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-500 overflow-hidden group ${activeCategory === category
+                        ? 'text-luxury-black'
+                        : 'text-luxury-cream/40 hover:text-luxury-cream'
                         }`}
                     >
-                      <span className="relative z-10">{category}</span>
-                      <span className={`text-[8px] px-1.5 py-0.5 rounded-full border transition-colors ${activeCategory === category
-                        ? 'border-luxury-gold text-luxury-gold'
-                        : 'border-white/10 text-white/20'
-                        }`}>
-                        {getCategoryCount(category)}
-                      </span>
+                      {/* Active Background Pill */}
                       {activeCategory === category && (
                         <motion.div
-                          layoutId="activeCategory"
-                          className="absolute bottom-0 left-0 w-full h-[1px] bg-luxury-gold"
+                          layoutId="activeCategoryPill"
+                          className="absolute inset-0 bg-luxury-gold"
+                          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                         />
                       )}
+
+                      <span className="relative z-10 flex items-center gap-2">
+                        {category}
+                        <span className={`text-[8px] opacity-40 group-hover:opacity-100 transition-opacity ${activeCategory === category ? 'text-luxury-black animate-pulse' : ''
+                          }`}>
+                          ({getCategoryCount(category)})
+                        </span>
+                      </span>
                     </button>
                   ))}
                 </div>

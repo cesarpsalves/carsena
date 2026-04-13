@@ -159,4 +159,12 @@
   .vertical-rl {
     writing-mode: vertical-rl;
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
