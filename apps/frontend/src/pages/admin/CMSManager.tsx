@@ -995,7 +995,7 @@ export const CMSManager = () => {
                     type="button"
                     onClick={() => {
                       const newSections = [...sections];
-                      let sIdx = newSections.findIndex(s => s.section_key === 'services');
+                      const sIdx = newSections.findIndex(s => s.section_key === 'services');
                       if (sIdx === -1) return;
                       
                       const currentContent = newSections[sIdx].content || {};

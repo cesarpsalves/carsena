@@ -75,20 +75,42 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
 
     portfolioService.getImages().then((images) => {
       if (cancelled) return;
-      
+
       let allPhotos: PortfolioPhoto[] = [];
       if (images.length > 0) {
         allPhotos = images.map(toPhoto);
       } else {
-        allPhotos = DEFAULT_PHOTOS.map(p => ({ ...p, orientation: 'landscape' })) as PortfolioPhoto[];
+        allPhotos = DEFAULT_PHOTOS.map((p) => ({ ...p, orientation: 'landscape' })) as PortfolioPhoto[];
       }
-      
+
       setPhotos(allPhotos);
-      
-      // Shuffle and pick 6
-      const shuffled = [...allPhotos].sort(() => 0.5 - Math.random());
-      setDisplayPhotos(shuffled.slice(0, 6));
-      
+
+      // Strategy: 1 image per category, then fill up to 6
+      const categories = Array.from(new Set(allPhotos.map((p: PortfolioPhoto) => p.category).filter(Boolean))) as string[];
+      const selected: PortfolioPhoto[] = [];
+      const usedIds = new Set<string>();
+
+      // First pass: Pick one from each category randomly
+      categories.forEach((cat: string) => {
+        const catPhotos = allPhotos.filter((p: PortfolioPhoto) => p.category === cat);
+        if (catPhotos.length > 0) {
+          const randomPhoto = catPhotos[Math.floor(Math.random() * catPhotos.length)];
+          selected.push(randomPhoto);
+          usedIds.add(randomPhoto.id);
+        }
+      });
+
+      // Second pass: If we have less than 6 (or whatever desired), fill with others randomly
+      const remaining = allPhotos.filter((p: PortfolioPhoto) => !usedIds.has(p.id));
+      const shuffledRemaining = [...remaining].sort(() => 0.5 - Math.random());
+
+      // We want to show a decent amount, let's say up to 6 or the number of categories if > 6
+      const targetCount = Math.max(6, categories.length);
+      const finalSelection = [...selected, ...shuffledRemaining].slice(0, targetCount);
+
+      // Final shuffle to not have all "first of category" at the top
+      setDisplayPhotos(finalSelection.sort(() => 0.5 - Math.random()));
+
       setLoading(false);
     });
 
@@ -104,7 +126,7 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
     if (photo.orientation === 'portrait') {
       return 'col-span-12 md:col-span-4 h-[500px] md:h-[700px]';
     }
-    
+
     // Default landscape grid patterns
     const landscapePattern = [
       'col-span-12 md:col-span-8 h-[400px] md:h-[600px]',
@@ -112,7 +134,7 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
       'col-span-12 md:col-span-4 h-[400px] md:h-[500px]',
       'col-span-12 md:col-span-8 h-[400px] md:h-[500px]'
     ];
-    
+
     return landscapePattern[index % landscapePattern.length];
   };
 
@@ -146,6 +168,7 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
               <Link
                 key={photo.id}
                 to="/portfolio"
+                state={{ category: photo.category }}
                 className="relative group overflow-hidden bg-luxury-black/5 flex items-center justify-center break-inside-avoid rounded-sm shadow-sm hover:shadow-xl transition-all duration-500"
               >
                 <img
@@ -154,15 +177,22 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
                   loading={index < 2 ? 'eager' : 'lazy'}
                   className="w-full h-auto object-cover transition-transform duration-1000 group-hover:scale-105"
                 />
-                
-                {/* Minimalist Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/90 via-luxury-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out p-8 flex flex-col justify-end">
+
+                {/* Visible Category Label (Always visible or semi-permanent) */}
+                <div className="absolute top-4 left-4 z-10">
+                  <div className="bg-luxury-black/40 backdrop-blur-md px-3 py-1.5 border border-white/10 rounded-full shadow-lg transition-all duration-500 group-hover:bg-luxury-gold/20 group-hover:border-luxury-gold/30">
+                    <span className="text-luxury-cream text-[8px] uppercase tracking-[0.3em] font-bold">
+                      {photo.category}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Minimalist Overlay - Detailed info on hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-luxury-black/95 via-luxury-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out p-8 flex flex-col justify-end">
                   <div className="transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
-                    {photo.category && (
-                      <span className="block text-luxury-gold text-[10px] uppercase tracking-[0.4em] mb-3">
-                        {photo.category}
-                      </span>
-                    )}
+                    <span className="block text-luxury-gold text-[10px] uppercase tracking-[0.4em] mb-3">
+                      Descobrir Galeria
+                    </span>
                     {photo.title && (
                       <h3 className="text-luxury-cream font-playfair text-2xl italic">
                         {photo.title}
@@ -173,7 +203,7 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
                 </div>
 
                 {/* Corner detail */}
-                <div className="absolute top-4 right-4 w-6 h-6 border border-white/10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 backdrop-blur-sm">
+                <div className="absolute bottom-4 right-4 w-6 h-6 border border-white/10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 backdrop-blur-sm">
                   <div className="w-0.5 h-0.5 bg-luxury-gold rounded-full" />
                 </div>
               </Link>
@@ -182,7 +212,7 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
         )}
 
         <div className="mt-16 flex justify-center">
-          <Link 
+          <Link
             to="/portfolio"
             className="text-[11px] font-bold uppercase tracking-[0.2em] border-b-2 border-luxury-black pb-2 hover:text-luxury-gold hover:border-luxury-gold transition-all duration-300"
           >
