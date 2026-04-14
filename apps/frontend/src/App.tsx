@@ -19,6 +19,7 @@ import { EventCheckout } from './pages/client/EventCheckout';
 import { Toaster } from 'sonner';
 import './index.css';
 import Portfolio from './pages/Portfolio';
+import ScrollToTop from './components/layout/ScrollToTop';
 
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -26,6 +27,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <Routes>
           {/* Public Routes - Landing Page Only */}
           <Route 
