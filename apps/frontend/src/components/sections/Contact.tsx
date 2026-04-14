@@ -19,22 +19,29 @@ export const Contact = ({ title, subtitle, data }: ContactProps) => {
     e.preventDefault();
     setStatus('loading');
 
+    // Gerar o link do WhatsApp com os dados do formulário
+    const whatsappMessage = `Olá Alexandre! Gostaria de saber mais sobre seu trabalho. Vi seu portfólio no site e fiquei interessado(a).\n\nMeu nome é *${formData.name}*.\n\n*Minha mensagem:* ${formData.message}`;
+    const whatsappUrl = `https://wa.me/5581988657659?text=${encodeURIComponent(whatsappMessage)}`;
+
+    // Abre o WhatsApp em uma nova aba
+    window.open(whatsappUrl, '_blank');
+
     try {
+      // Tenta enviar o e-mail em segundo plano
       const response = await fetch(`${import.meta.env.VITE_API_URL}/emails/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw new Error('Falha ao enviar');
-      
+      // Mesmo que o e-mail falhe, já abrimos o WhatsApp, então mostramos sucesso
       setStatus('success');
-      // Não limpamos o formData aqui para que possamos usá-lo no link do WhatsApp
-      setTimeout(() => setStatus('idle'), 30000); // Aumentado o tempo de exibição do sucesso
+      setTimeout(() => setStatus('idle'), 10000);
     } catch (error) {
-      console.error(error);
-      setStatus('error');
-      setTimeout(() => setStatus('idle'), 3000);
+      console.error('Erro ao enviar e-mail de backup:', error);
+      // Se falhar o e-mail, ainda mostramos sucesso pois o WhatsApp já foi aberto
+      setStatus('success');
+      setTimeout(() => setStatus('idle'), 10000);
     }
   };
 
@@ -84,9 +91,9 @@ export const Contact = ({ title, subtitle, data }: ContactProps) => {
                     <CheckCircle2 size={80} className="relative z-10" />
                   </div>
                   <div className="space-y-2 relative z-10">
-                    <h3 className="text-editorial text-3xl md:text-4xl text-luxury-black">Quase lá!</h3>
+                    <h3 className="text-editorial text-3xl md:text-4xl text-luxury-black">Atendimento Iniciado!</h3>
                     <p className="text-luxury-black/70 font-sans text-sm md:text-base px-4">
-                      Sua mensagem foi registrada com sucesso em nosso sistema.
+                      Seu WhatsApp deve ter aberto automaticamente. Caso não tenha aberto, clique no botão abaixo para falar agora:
                     </p>
                   </div>
                   
@@ -95,7 +102,7 @@ export const Contact = ({ title, subtitle, data }: ContactProps) => {
                     <p className="text-xs text-luxury-black/60">Para uma resposta imediata e agendamento rápido, clique no botão abaixo:</p>
                     
                     <a 
-                      href={`https://wa.me/5581988657659?text=${encodeURIComponent(`Olá Cesar! Acabei de preencher o formulário no site Carsena.\n\nMeu nome é ${formData.name}.\n\nGostaria de falar sobre: ${formData.message}`)}`}
+                      href={`https://wa.me/5581988657659?text=${encodeURIComponent(`Olá Alexandre! Gostaria de saber mais sobre seu trabalho. Vi seu portfólio no site e fiquei interessado(a).\n\nMeu nome é *${formData.name}*.\n\n*Minha mensagem:* ${formData.message}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full bg-luxury-black text-luxury-gold font-bold text-[11px] uppercase tracking-[0.3em] py-5 rounded-lg hover:bg-luxury-gold hover:text-luxury-black transition-all duration-500 flex items-center justify-center gap-3 shadow-xl group"
