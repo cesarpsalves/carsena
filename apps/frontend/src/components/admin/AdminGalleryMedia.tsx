@@ -50,16 +50,22 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
 
       if (photosError) throw photosError;
 
-      // 2. Fetch Favorites for this gallery
-      const { data: favoritesData } = await supabase
-        .schema('app_carsena')
-        .from("photo_selections")
-        .select("photo_id")
-        .eq("is_favorite", true);
-      
-      // Note: We might want to filter favorites by the gallery's customer to be more precise,
-      // but for simple cases, any favorite for these photo IDs works.
-      const favoriteIds = new Set((favoritesData || []).map(f => f.photo_id));
+      // 2. Fetch Favorites for the photos contained in this gallery
+      const photoIds = (photosData || []).map(p => p.id);
+      let favoriteIds = new Set<string>();
+
+      if (photoIds.length > 0) {
+        const { data: favoritesData, error: favError } = await supabase
+          .schema('app_carsena')
+          .from("photo_selections")
+          .select("photo_id")
+          .eq("is_favorite", true)
+          .in("photo_id", photoIds);
+
+        if (!favError && favoritesData) {
+          favoriteIds = new Set(favoritesData.map(f => f.photo_id));
+        }
+      }
 
       const enrichedPhotos = (photosData || []).map(p => ({
         ...p,
@@ -255,11 +261,17 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
              <button 
                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                className={cn(
-                 "flex items-center gap-1.5 transition-all",
+                 "flex items-center gap-2 transition-all group",
                  showFavoritesOnly ? "text-red-400" : "hover:text-white"
                )}
              >
-               <div className={cn("w-2 h-2 rounded-full", showFavoritesOnly ? "bg-red-400 animate-pulse" : "bg-red-500/50")} /> 
+               <Heart 
+                 size={14} 
+                 className={cn(
+                   "transition-all duration-300", 
+                   showFavoritesOnly ? "fill-red-400 scale-110" : "text-red-500/40 group-hover:text-red-500 group-hover:scale-110"
+                 )} 
+               /> 
                Favoritos {showFavoritesOnly ? '(Filtrado)' : ''}
              </button>
              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-400" /> Cortesia</div>
