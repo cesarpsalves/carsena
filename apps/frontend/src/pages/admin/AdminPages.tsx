@@ -1314,15 +1314,21 @@ export const AdminGalleries = () => {
             onChange={(val) => setNewClient({ ...newClient, name: val })}
             required={true}
           />
-          <FormInput 
-            label="E-mail" 
-            type="email"
-            placeholder="julia@exemplo.com" 
-            icon={<Globe size={16} />} 
-            value={newClient.email}
-            onChange={(val) => setNewClient({ ...newClient, email: val })}
-            required={true}
-          />
+          <div className="space-y-1">
+            <FormInput 
+              label="E-mail (Opcional)" 
+              type="email"
+              placeholder="julia@exemplo.com" 
+              icon={<Globe size={16} />} 
+              value={newClient.email}
+              onChange={(val) => setNewClient({ ...newClient, email: val })}
+              required={false}
+            />
+            <p className="text-[8px] text-white/20 uppercase tracking-[0.2em] pl-10">
+              Opcional: Necessário para notificações automáticas de sessão.
+            </p>
+          </div>
+
           <FormInput 
             label="WhatsApp / Telefone" 
             placeholder="(81) 98820-6370" 
