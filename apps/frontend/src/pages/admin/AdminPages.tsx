@@ -38,7 +38,7 @@ import { UploadZone } from '../../components/admin/UploadZone';
 import { AdminGalleryMedia } from '../../components/admin/AdminGalleryMedia';
 import { useAuth } from "../../contexts/AuthContext";
 
-import { formatCurrency, formatCPF, validateCPF } from "@/utils/format";
+import { formatCurrency, formatCPF, formatPhone } from "@/utils/format";
 import { deleteRawFiles } from "@/lib/api";
 
 
@@ -1312,6 +1312,7 @@ export const AdminGalleries = () => {
             icon={<User size={16} />} 
             value={newClient.name}
             onChange={(val) => setNewClient({ ...newClient, name: val })}
+            required={true}
           />
           <FormInput 
             label="E-mail" 
@@ -1320,13 +1321,15 @@ export const AdminGalleries = () => {
             icon={<Globe size={16} />} 
             value={newClient.email}
             onChange={(val) => setNewClient({ ...newClient, email: val })}
+            required={true}
           />
           <FormInput 
             label="WhatsApp / Telefone" 
-            placeholder="+(55) 11 ..." 
+            placeholder="(81) 98820-6370" 
             icon={<Search size={16} />} 
             value={newClient.phone}
-            onChange={(val) => setNewClient({ ...newClient, phone: val })}
+            onChange={(val) => setNewClient({ ...newClient, phone: formatPhone(val) })}
+            required={true}
           />
           <FormInput 
             label="CPF (Opcional)" 

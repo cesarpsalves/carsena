@@ -35,6 +35,7 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
   const [gridSize, setGridSize] = useState(3);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const fetchPhotos = async () => {
     setLoading(true);
@@ -86,6 +87,19 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
             schema: "app_carsena", 
             table: "photos",
             filter: `gallery_id=eq.${galleryId}`
+          },
+          () => {
+            fetchPhotos();
+          }
+        )
+        .on(
+          "postgres_changes",
+          { 
+            event: "*", 
+            schema: "app_carsena", 
+            table: "photo_selections",
+            // Unfortunately supabase doesn't support joins in filters dynamically easily,
+            // but we can just refetch on any photo_selection change, it's cheap enough for this use case
           },
           () => {
             fetchPhotos();
@@ -238,7 +252,16 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
           </div>
 
           <div className="hidden md:flex items-center gap-4 text-[8px] uppercase tracking-widest text-white/30 border-l border-white/5 pl-6">
-             <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500" /> Favorito</div>
+             <button 
+               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+               className={cn(
+                 "flex items-center gap-1.5 transition-all",
+                 showFavoritesOnly ? "text-red-400" : "hover:text-white"
+               )}
+             >
+               <div className={cn("w-2 h-2 rounded-full", showFavoritesOnly ? "bg-red-400 animate-pulse" : "bg-red-500/50")} /> 
+               Favoritos {showFavoritesOnly ? '(Filtrado)' : ''}
+             </button>
              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-400" /> Cortesia</div>
           </div>
         </div>
@@ -250,7 +273,7 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
         gridSize === 3 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
         gridSize === 4 && "grid-cols-2 sm:grid-cols-3 xl:grid-cols-4",
       )}>
-        {photos.map((photo) => {
+        {photos.filter(p => showFavoritesOnly ? p.is_favorite : true).map((photo) => {
           const displayUrl = getStoragePublicUrl(photo.thumbnail_path || photo.storage_path);
           const isCover = coverImageUrl === displayUrl;
           const isProcessing = processingId === photo.id || !photo.is_processed;
@@ -313,6 +336,11 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
                      <span className="text-[9px] uppercase font-bold tracking-widest text-luxury-gold bg-black/50 px-3 py-1 rounded">Blindando...</span>
                   </div>
                 )}
+                
+                {/* Image Filename Hover Overlay */}
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-3 pt-8 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                  <p className="text-[9px] text-white/70 font-mono truncate">{photo.filename}</p>
+                </div>
               </div>
 
               {/* Botões de Ação Sempre Visíveis e Grandes */}
