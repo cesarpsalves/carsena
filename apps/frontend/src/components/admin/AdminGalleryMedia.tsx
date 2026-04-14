@@ -46,7 +46,7 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
         .from("photos")
         .select("*")
         .eq("gallery_id", galleryId)
-        .order("created_at", { ascending: false });
+        .order("filename", { ascending: true });
 
       if (photosError) throw photosError;
 
@@ -237,7 +237,9 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
            </div>
            <div>
              <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-luxury-gold">Acervo Visual</h4>
-             <p className="text-[9px] text-white/40 uppercase tracking-widest">{photos.length} capturas nesta sessão</p>
+             <p className="text-[9px] text-white/40 uppercase tracking-widest">
+               {photos.length} capturas nesta sessão • {photos.filter(p => p.is_favorite).length} favoritos
+             </p>
            </div>
         </div>
 
@@ -275,6 +277,14 @@ export const AdminGalleryMedia: React.FC<AdminGalleryMediaProps> = ({
                Favoritos {showFavoritesOnly ? '(Filtrado)' : ''}
              </button>
              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-400" /> Cortesia</div>
+             
+             <button 
+               onClick={fetchPhotos}
+               className="ml-2 p-1.5 hover:bg-white/5 rounded-full transition-colors text-white/20 hover:text-white"
+               title="Sincronizar Manualmente"
+             >
+               <Loader2 size={12} className={cn(loading && "animate-spin")} />
+             </button>
           </div>
         </div>
       </div>
