@@ -26,6 +26,7 @@ export interface LandingSettings {
   show_testimonials?: boolean;
   is_active?: boolean;
   watermark_text?: string;
+  favorite_categories?: string[];
 }
 
 export interface LandingSection {
@@ -72,7 +73,8 @@ export const cmsService = {
         hero_title: 'Carsena Fotografia',
         hero_subtitle: 'Capturando momentos extraordinários com olhar artístico e atemporal.',
         show_contact: true,
-        show_galleries: true
+        show_galleries: true,
+        favorite_categories: []
       };
     } catch (error) {
       console.error('Error fetching landing settings:', error);

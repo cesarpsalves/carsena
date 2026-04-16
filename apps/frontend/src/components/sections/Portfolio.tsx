@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { portfolioService, getPortfolioPublicUrl } from '@/lib/portfolio';
 import type { PortfolioImage } from '@/lib/portfolio';
 
@@ -61,13 +62,13 @@ function toPhoto(img: PortfolioImage | typeof DEFAULT_PHOTOS[number]): Portfolio
 interface PortfolioProps {
   title?: string;
   subtitle?: string;
+  favoriteCategories?: string[];
 }
 
-export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
+export const Portfolio = ({ title, subtitle, favoriteCategories }: PortfolioProps) => {
   const [photos, setPhotos] = useState<PortfolioPhoto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<string>('Todos');
-
+  const navigate = useNavigate();
   const [displayPhotos, setDisplayPhotos] = useState<PortfolioPhoto[]>([]);
 
   useEffect(() => {
@@ -85,59 +86,40 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
 
       setPhotos(allPhotos);
 
-      // Strategy: 1 image per category, then fill up to 6
-      const categories = Array.from(new Set(allPhotos.map((p: PortfolioPhoto) => p.category).filter(Boolean))) as string[];
-      const selected: PortfolioPhoto[] = [];
-      const usedIds = new Set<string>();
-
-      // First pass: Pick one from each category randomly
-      categories.forEach((cat: string) => {
-        const catPhotos = allPhotos.filter((p: PortfolioPhoto) => p.category === cat);
+      // Strategy: Select 6 categories total, prioritizing favorites.
+      const allCategories = Array.from(new Set(allPhotos.map((p: PortfolioPhoto) => p.category).filter(Boolean))) as string[];
+      
+      let selectedCategories: string[] = [];
+      
+      // 1. Add favorites that actually have photos
+      const actualFavorites = (favoriteCategories || []).filter(cat => allCategories.includes(cat));
+      selectedCategories = [...actualFavorites];
+      
+      // 2. Add others randomly until we reach 6
+      const otherCategories = allCategories.filter(cat => !selectedCategories.includes(cat));
+      const shuffledOthers = [...otherCategories].sort(() => 0.5 - Math.random());
+      
+      selectedCategories = [...selectedCategories, ...shuffledOthers].slice(0, 6);
+      
+      // 3. Pick one random photo for each selected category
+      const finalSelection: PortfolioPhoto[] = [];
+      selectedCategories.forEach(cat => {
+        const catPhotos = allPhotos.filter(p => p.category === cat);
         if (catPhotos.length > 0) {
           const randomPhoto = catPhotos[Math.floor(Math.random() * catPhotos.length)];
-          selected.push(randomPhoto);
-          usedIds.add(randomPhoto.id);
+          finalSelection.push(randomPhoto);
         }
       });
 
-      // Second pass: If we have less than 6 (or whatever desired), fill with others randomly
-      const remaining = allPhotos.filter((p: PortfolioPhoto) => !usedIds.has(p.id));
-      const shuffledRemaining = [...remaining].sort(() => 0.5 - Math.random());
-
-      // We want to show a decent amount, let's say up to 6 or the number of categories if > 6
-      const targetCount = Math.max(6, categories.length);
-      const finalSelection = [...selected, ...shuffledRemaining].slice(0, targetCount);
-
-      // Final shuffle to not have all "first of category" at the top
+      // 4. Final shuffle to keep it dynamic as requested
       setDisplayPhotos(finalSelection.sort(() => 0.5 - Math.random()));
 
       setLoading(false);
     });
-
+ 
     return () => { cancelled = true; };
   }, []);
-
-  /**
-   * Layout Logic:
-   * Portrait images take col-span-12 md:col-span-4 and taller height.
-   * Landscape images take col-span-12 md:col-span-8 or 4 depending on position.
-   */
-  const getPhotoClass = (photo: PortfolioPhoto, index: number): string => {
-    if (photo.orientation === 'portrait') {
-      return 'col-span-12 md:col-span-4 h-[500px] md:h-[700px]';
-    }
-
-    // Default landscape grid patterns
-    const landscapePattern = [
-      'col-span-12 md:col-span-8 h-[400px] md:h-[600px]',
-      'col-span-12 md:col-span-4 h-[400px] md:h-[600px]',
-      'col-span-12 md:col-span-4 h-[400px] md:h-[500px]',
-      'col-span-12 md:col-span-8 h-[400px] md:h-[500px]'
-    ];
-
-    return landscapePattern[index % landscapePattern.length];
-  };
-
+ 
   return (
     <section id="portfolio" className="section-padding bg-luxury-cream">
       <div className="container-premium lg:px-12">
@@ -152,6 +134,39 @@ export const Portfolio = ({ title, subtitle }: PortfolioProps) => {
             {subtitle || 'Nossa curadoria de momentos capturados com sensibilidade e técnica para criar memórias atemporais.'}
           </p>
         </div>
+ 
+        {/* Category Navigation Bar - Design Specialist Touch */}
+        {!loading && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="mb-16 border-b border-luxury-black/5 pb-4"
+          >
+            <div className="flex items-center gap-10 overflow-x-auto no-scrollbar py-2">
+              <button
+                onClick={() => navigate('/portfolio')}
+                className="text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-gold hover:text-luxury-black transition-all duration-500 whitespace-nowrap"
+              >
+                Explorar Tudo
+              </button>
+              
+              <div className="w-[1px] h-4 bg-luxury-black/10 shrink-0" />
+
+              {Array.from(new Set(photos.map(p => p.category).filter(Boolean))).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => navigate('/portfolio', { state: { category: cat } })}
+                  className="group relative text-[10px] font-bold uppercase tracking-[0.4em] text-luxury-black/40 hover:text-luxury-black transition-all duration-500 whitespace-nowrap"
+                >
+                  <span className="relative z-10">{cat}</span>
+                  <span className="absolute bottom-[-16px] left-0 w-full h-[2px] bg-luxury-gold scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {loading ? (
           <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">

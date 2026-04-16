@@ -110,6 +110,10 @@ const Home = () => {
               address: section.content?.address,
             };
           }
+ 
+          if (section.section_key === 'portfolio') {
+            componentProps.favoriteCategories = settings?.favorite_categories;
+          }
 
           if (section.section_key === 'instagram') {
             componentProps.username = settings?.instagram_username || "carsena_fotografo";

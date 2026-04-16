@@ -628,6 +628,58 @@ export const CMSManager = () => {
                   </p>
                 </div>
 
+                {/* Categorias Favoritas */}
+                <div className="bg-luxury-gold/5 border border-luxury-gold/20 p-6 space-y-6">
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-luxury-gold">Categorias em Destaque (Landing Page)</h4>
+                    <p className="text-[9px] text-white/40 uppercase tracking-widest leading-relaxed">
+                      Escolha até 4 categorias para fixar na página principal. Elas sempre estarão presentes entre as 6 exibidas.
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from(new Set(portfolioImages.map(img => img.category).filter(Boolean))).map(cat => {
+                      const isFavorite = settings?.favorite_categories?.includes(cat!);
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => {
+                            if (!settings) return;
+                            const favorites = settings.favorite_categories || [];
+                            if (isFavorite) {
+                              setSettings({
+                                ...settings,
+                                favorite_categories: favorites.filter(f => f !== cat)
+                              });
+                            } else {
+                              if (favorites.length >= 4) {
+                                alert("Você pode selecionar no máximo 4 categorias favoritas.");
+                                return;
+                              }
+                              setSettings({
+                                ...settings,
+                                favorite_categories: [...favorites, cat!]
+                              });
+                            }
+                          }}
+                          className={cn(
+                            "px-4 py-2 text-[9px] font-bold uppercase tracking-widest border transition-all",
+                            isFavorite 
+                              ? "bg-luxury-gold/20 border-luxury-gold text-luxury-gold shadow-[0_0_15px_rgba(212,175,55,0.1)]" 
+                              : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white"
+                          )}
+                        >
+                          {cat}
+                          {isFavorite && <CheckCircle2 size={10} className="inline ml-2 mt-[-2px]" />}
+                        </button>
+                      );
+                    })}
+                    {portfolioImages.filter(i => i.category).length === 0 && (
+                      <p className="text-[9px] text-white/20 italic">Adicione fotos e defina categorias para selecioná-las como favoritas.</p>
+                    )}
+                  </div>
+                </div>
+
                 {/* Drop zone / upload trigger */}
                 <div
                   onClick={() => portfolioFileRef.current?.click()}
