@@ -10,6 +10,7 @@ import { CMSManager } from "./pages/admin/CMSManager";
 import { CloudManager } from "./pages/admin/CloudManager";
 import { AdminScanner } from "./pages/admin/AdminScanner";
 import { AdminGalleries, AdminTickets, AdminFinance, AdminSettings } from "./pages/admin/AdminPages";
+import { AdminAnalytics } from "./pages/admin/AdminAnalytics";
 import { ExperienceHome } from './pages/client/ExperienceHome';
 import { GalleryView } from './pages/client/GalleryView';
 import { GalleryRedirect } from './pages/client/GalleryRedirect';
@@ -64,6 +65,7 @@ function App() {
                   <Route path="bilheteria" element={<AdminTickets />} />
                   <Route path="validar" element={<AdminScanner />} />
                   <Route path="vitrine" element={<CMSManager />} />
+                  <Route path="analytics" element={<AdminAnalytics />} />
                   <Route path="caixa" element={<AdminFinance />} />
                   <Route path="nuvem" element={<CloudManager />} />
                   <Route path="ajustes" element={<AdminSettings />} />

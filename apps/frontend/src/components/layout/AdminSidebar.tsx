@@ -11,7 +11,8 @@ import {
   Cloud, 
   Settings, 
   LogOut,
-  X
+  X,
+  TrendingUp
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navItems = [
   { icon: <Ticket size={24} />, label: "Bilheteria", path: "/admin/bilheteria", description: "Ingressos & Eventos" },
   { icon: <Maximize size={24} />, label: "Portaria", path: "/admin/validar", description: "Validar Ingresso" },
   { icon: <Layout size={24} />, label: "Vitrine", path: "/admin/vitrine", description: "Editar Meu Site" },
+  { icon: <TrendingUp size={24} />, label: "Analytics", path: "/admin/analytics", description: "Acessos e Métricas" },
   { icon: <Wallet size={24} />, label: "Caixa", path: "/admin/caixa", description: "Financeiro" },
   { icon: <Cloud size={24} />, label: "Nuvem", path: "/admin/nuvem", description: "Espaço R2" },
   { icon: <Settings size={24} />, label: "Ajustes", path: "/admin/ajustes", description: "Configurações" },

@@ -8,6 +8,7 @@ import { Philosophy } from "../components/sections/Philosophy";
 import { InstagramSection } from "../components/sections/InstagramSection";
 import { cmsService } from "@/lib/cms";
 import type { LandingSettings, LandingSection } from "@/lib/cms";
+import { analyticsService } from "@/lib/analytics";
 
 const SECTION_COMPONENTS: Record<string, React.FC<any>> = {
   hero: Hero,
@@ -25,6 +26,9 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Record page view for analytics
+    analyticsService.trackPageView('/');
+    
     const loadContent = async () => {
       setLoading(true);
       try {

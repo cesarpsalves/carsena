@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { portfolioService, getPortfolioPublicUrl } from '@/lib/portfolio';
 import type { PortfolioImage } from '@/lib/portfolio';
+import { analyticsService } from '@/lib/analytics';
 
 // Default photos used as fallback when no custom portfolio is configured.
 // These will appear automatically if the photographer hasn't set up their portfolio yet.
@@ -184,6 +185,7 @@ export const Portfolio = ({ title, subtitle, favoriteCategories }: PortfolioProp
                 key={photo.id}
                 to="/portfolio"
                 state={{ category: photo.category }}
+                onClick={() => analyticsService.trackPortfolioClick(photo.id, photo.category)}
                 className="relative group overflow-hidden bg-luxury-black/5 flex items-center justify-center break-inside-avoid rounded-sm shadow-sm hover:shadow-xl transition-all duration-500"
               >
                 <img
